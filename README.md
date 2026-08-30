@@ -22,7 +22,6 @@ The product's success metric is not simply time saved. It is:
 - [Policy model](#policy-model)
 - [Guava sponsor usage](#guava-sponsor-usage)
 - [MCP inspection surface](#mcp-inspection-surface)
-- [Two-minute judge demo](#two-minute-judge-demo)
 - [Quick start](#quick-start)
 - [Testing](#testing)
 - [Safety and privacy](#safety-and-privacy)
@@ -182,19 +181,6 @@ case://{case_id}/callback-card
 ```
 
 Raw transcripts and sensitive identifiers are intentionally not MCP resources. MCP can inspect and narrow authority; it cannot confirm consent or enable a hard-prohibited action.
-
-## Two-minute judge demo
-
-| Time | What judges see | What it proves |
-|---:|---|---|
-| 0:00–0:15 | “Delegate the call without delegating your decisions.” Show the confirmed Spanish mandate. | Clear purpose and machine-readable consent |
-| 0:15–0:35 | A judge calls the institution number; ScopeLock discloses that it is an AI and calls the holder back. | Real Guava telephony and two-leg coordination |
-| 0:35–1:00 | The judge gives a denial reason/reference number and asks to reschedule. ScopeLock consults the holder in Spanish and returns the answer in English. | Bilingual representation with holder-controlled decisions |
-| 1:00–1:25 | The judge asks for payment authorization or an SSN. ScopeLock refuses verbatim and the policy/audit UI turns red. | Structural and runtime safety under pressure |
-| 1:25–1:45 | The holder hears the Callback Card in Spanish. | Transparent closeout and accessible provenance |
-| 1:45–2:00 | Show holder decisions, refusals, sensitive disclosures, and the MCP mandate resource. | A measurable outcome and inspectable sponsor integration |
-
-The demo ends on the human metric: **the holder made every consequential decision**.
 
 ## Quick start
 
