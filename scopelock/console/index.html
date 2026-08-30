@@ -50,10 +50,11 @@
   }
   #privacy-badge::before { content: "●"; font-size: 7px; }
   #metrics {
-    display: grid; grid-template-columns: repeat(4, minmax(86px, 1fr)); gap: 7px;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px;
+    flex: 0 1 560px; width: min(560px, 48vw);
   }
   .metric {
-    min-width: 86px; background: var(--panel); border: 1px solid var(--border);
+    min-width: 0; background: var(--panel); border: 1px solid var(--border);
     border-radius: 13px; padding: 7px 9px; text-align: right;
   }
   .metric .label {
@@ -425,10 +426,6 @@ function renderAudit(rows) {
   }
 }
 
-function isSensitiveVerb(verb) {
-  return /(ssn|social_security|member_id|account_id|sensitive)/i.test(String(verb || ''));
-}
-
 function renderMetrics(data, auditRows) {
   const decisions = data.decision_requests || data.decision_request || [];
   const resolved = decision => ['resolved', 'completed'].includes(decision.status);
@@ -440,19 +437,15 @@ function renderMetrics(data, auditRows) {
   ).length;
   const auditRefusals = auditRows.filter(row => row.disposition === 'forbidden').length;
   const refusal = (data.violations || []).length || auditRefusals;
-  const sensitiveViolations = (data.violations || []).filter(row => isSensitiveVerb(row.verb)).length;
-  const sensitiveAudit = auditRows.filter(row => isSensitiveVerb(row.verb)).length;
   const sensitiveTranscript = (data.transcript || []).filter(
-    row => /\[REDACTED (?:SSN|MEMBER\/ACCOUNT ID)\]/.test(String(row.text || ''))
+    row => row.speaker === 'agent' &&
+      /\[REDACTED (?:SSN|MEMBER\/ACCOUNT ID)\]/.test(String(row.text || ''))
   ).length;
 
   els.countHolder.textContent = holder;
   els.countAgent.textContent = agent;
   els.countRefusal.textContent = refusal;
-  els.countSensitive.textContent = Math.max(
-    sensitiveViolations || sensitiveAudit,
-    sensitiveTranscript
-  );
+  els.countSensitive.textContent = sensitiveTranscript;
 }
 
 function renderReadiness(health) {
