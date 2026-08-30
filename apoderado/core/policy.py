@@ -152,4 +152,3 @@ class PolicyService:
             raise KeyError(f"case {case_id} has no mandate draft")
         db.confirm_mandate(case_id, utterance)
         db.set_case_state(case_id, "mandated")
-
