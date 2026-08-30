@@ -8,9 +8,30 @@ import time
 import uuid
 from pathlib import Path
 
+try:
+    from apoderado.core.redact import redact
+except ImportError:
+    # STUB — replace with person C's branch at merge
+    redact = lambda text: text
+
 DB_PATH = Path(__file__).resolve().parent.parent.parent / "apoderado.db"
 
 _local = threading.local()
+
+CASE_STATES = (
+    "intake",
+    "mandate_draft",
+    "mandated",
+    "awaiting_institution",
+    "connecting_holder",
+    "representing",
+    "consulting_holder",
+    "closing",
+    "closed",
+    "interrupted",
+)
+
+DISPOSITIONS = ("allowed", "requires_holder", "forbidden")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS kase (
@@ -23,29 +44,48 @@ CREATE TABLE IF NOT EXISTS kase (
   issue_summary TEXT NOT NULL,
   session_a     TEXT,
   session_b     TEXT,
-  state         TEXT NOT NULL,
+  state         TEXT NOT NULL CHECK(state IN (
+                  'intake', 'mandate_draft', 'mandated', 'awaiting_institution',
+                  'connecting_holder', 'representing', 'consulting_holder',
+                  'closing', 'closed', 'interrupted'
+                )),
   created_at    TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS mandate_rule (
-  id        TEXT PRIMARY KEY,
-  case_id   TEXT NOT NULL REFERENCES kase(id),
-  verb      TEXT NOT NULL,
-  allowed   INTEGER NOT NULL,
+  id          TEXT PRIMARY KEY,
+  case_id     TEXT NOT NULL REFERENCES kase(id),
+  verb        TEXT NOT NULL,
+  disposition TEXT NOT NULL CHECK(disposition IN ('allowed', 'requires_holder', 'forbidden')),
   confirmed_by_holder INTEGER DEFAULT 0,
-  confirmed_utterance TEXT
+  confirmed_utterance TEXT,
+  UNIQUE(case_id, verb)
 );
 
-CREATE TABLE IF NOT EXISTS consult (
-  id            TEXT PRIMARY KEY,
-  case_id       TEXT NOT NULL REFERENCES kase(id),
-  question_en   TEXT NOT NULL,
-  question_es   TEXT NOT NULL,
-  answer_es     TEXT NOT NULL,
-  answer_en     TEXT NOT NULL,
-  decided_by    TEXT NOT NULL,
-  latency_ms    INTEGER,
-  created_at    TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS policy_event (
+  id               TEXT PRIMARY KEY,
+  case_id          TEXT NOT NULL,
+  verb             TEXT NOT NULL,
+  disposition      TEXT NOT NULL,
+  source           TEXT NOT NULL,
+  trigger_redacted TEXT,
+  result           TEXT NOT NULL,
+  created_at       TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS decision_request (
+  id          TEXT PRIMARY KEY,
+  case_id     TEXT NOT NULL,
+  verb        TEXT NOT NULL,
+  question_en TEXT NOT NULL,
+  question_es TEXT NOT NULL,
+  answer_es   TEXT,
+  answer_en   TEXT,
+  status      TEXT NOT NULL,
+  decided_by  TEXT CHECK(decided_by IS NULL OR decided_by = 'holder'),
+  latency_ms  INTEGER,
+  created_at  TEXT NOT NULL,
+  resolved_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS violation (
@@ -119,14 +159,20 @@ def get_case(case_id: str) -> sqlite3.Row | None:
 
 
 def get_open_case() -> sqlite3.Row | None:
-    """Dumb pairing for the demo: the one case that is mandated/live and has no institution leg yet."""
+    """Return the newest confirmed case waiting for its institution leg."""
     return connect().execute(
-        "SELECT * FROM kase WHERE state IN ('mandated', 'live') AND session_b IS NULL "
+        "SELECT * FROM kase WHERE state IN ('mandated', 'awaiting_institution') "
+        "AND session_b IS NULL "
         "ORDER BY created_at DESC LIMIT 1"
     ).fetchone()
 
 
 def set_case_state(case_id: str, state: str) -> None:
+    # Compatibility for the untouched relay module while keeping the persisted model
+    # inside the explicit state machine from build-spec section 8.1.
+    state = "awaiting_institution" if state == "live" else state
+    if state not in CASE_STATES:
+        raise ValueError(f"invalid case state: {state}")
     conn = connect()
     conn.execute("UPDATE kase SET state = ? WHERE id = ?", (state, case_id))
     conn.commit()
@@ -141,12 +187,25 @@ def set_case_session(case_id: str, *, session_a: str | None = None, session_b: s
     conn.commit()
 
 
-def create_mandate_rules(case_id: str, rules: dict[str, bool]) -> None:
+def create_mandate_rules(case_id: str, rules: dict[str, str | bool]) -> None:
+    """Replace a case's draft rules.
+
+    Boolean values remain accepted only as a compatibility seam for callers from the
+    baseline branch; all persisted values use the frozen tri-state contract.
+    """
+    normalized = {
+        verb: ("allowed" if value else "forbidden") if isinstance(value, bool) else value
+        for verb, value in rules.items()
+    }
+    invalid = set(normalized.values()) - set(DISPOSITIONS)
+    if invalid:
+        raise ValueError(f"invalid mandate disposition(s): {sorted(invalid)}")
     conn = connect()
+    conn.execute("DELETE FROM mandate_rule WHERE case_id = ?", (case_id,))
     conn.executemany(
-        "INSERT INTO mandate_rule (id, case_id, verb, allowed, confirmed_by_holder, confirmed_utterance) "
+        "INSERT INTO mandate_rule (id, case_id, verb, disposition, confirmed_by_holder, confirmed_utterance) "
         "VALUES (?, ?, ?, ?, 0, NULL)",
-        [(new_id("man"), case_id, verb, 1 if allowed else 0) for verb, allowed in rules.items()],
+        [(new_id("man"), case_id, verb, disposition) for verb, disposition in normalized.items()],
     )
     conn.commit()
 
@@ -163,12 +222,25 @@ def mandate_rule(case_id: str, verb: str) -> sqlite3.Row | None:
     ).fetchone()
 
 
+def set_mandate_disposition(case_id: str, verb: str, disposition: str) -> None:
+    if disposition not in DISPOSITIONS:
+        raise ValueError(f"invalid mandate disposition: {disposition}")
+    conn = connect()
+    cursor = conn.execute(
+        "UPDATE mandate_rule SET disposition = ? WHERE case_id = ? AND verb = ?",
+        (disposition, case_id, verb),
+    )
+    if cursor.rowcount != 1:
+        raise KeyError(f"no mandate rule for case {case_id} and verb {verb}")
+    conn.commit()
+
+
 def confirm_mandate(case_id: str, utterance: str) -> None:
     """A single verbal confirmation covers the whole mandate — see spec 5.3."""
     conn = connect()
     conn.execute(
         "UPDATE mandate_rule SET confirmed_by_holder = 1, confirmed_utterance = ? WHERE case_id = ?",
-        (utterance, case_id),
+        (redact(utterance), case_id),
     )
     conn.commit()
 
@@ -182,7 +254,7 @@ def log_violation(case_id: str, verb: str, trigger: str) -> None:
     conn = connect()
     conn.execute(
         "INSERT INTO violation (id, case_id, verb, trigger, created_at) VALUES (?, ?, ?, ?, ?)",
-        (new_id("vio"), case_id, verb, trigger, now()),
+        (new_id("vio"), case_id, verb, redact(trigger), now()),
     )
     conn.commit()
 
@@ -195,13 +267,23 @@ def violations(case_id: str) -> list[sqlite3.Row]:
 
 def record_consult(case_id: str, question_en: str, question_es: str,
                     answer_es: str, answer_en: str, latency_ms: int | None = None) -> str:
-    """decided_by is always 'holder' — there is no parameter for it. See core/consult.py."""
+    """Compatibility writer backed by the sole decision_request ledger."""
     conn = connect()
-    consult_id = new_id("con")
+    consult_id = new_id("dec")
     conn.execute(
-        "INSERT INTO consult (id, case_id, question_en, question_es, answer_es, answer_en, "
-        "decided_by, latency_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, 'holder', ?, ?)",
-        (consult_id, case_id, question_en, question_es, answer_es, answer_en, latency_ms, now()),
+        "INSERT INTO decision_request (id, case_id, verb, question_en, question_es, answer_es, "
+        "answer_en, status, decided_by, latency_ms, created_at, resolved_at) "
+        "VALUES (?, ?, 'holder_decision', ?, ?, ?, ?, 'resolved', 'holder', ?, ?, ?)",
+        (
+            consult_id,
+            redact(question_en),
+            redact(question_es),
+            redact(answer_es),
+            redact(answer_en),
+            latency_ms,
+            now(),
+            now(),
+        ),
     )
     conn.commit()
     return consult_id
@@ -209,7 +291,9 @@ def record_consult(case_id: str, question_en: str, question_es: str,
 
 def consults(case_id: str) -> list[sqlite3.Row]:
     return connect().execute(
-        "SELECT * FROM consult WHERE case_id = ? ORDER BY created_at", (case_id,)
+        "SELECT * FROM decision_request WHERE case_id = ? AND status = 'resolved' "
+        "ORDER BY created_at",
+        (case_id,),
     ).fetchall()
 
 
@@ -223,7 +307,7 @@ def add_utterance(case_id: str, leg: str, speaker: str, lang: str, text: str, ca
         "INSERT INTO utterance (id, case_id, leg, speaker, lang, text, call_id, created_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(id) DO UPDATE SET text = excluded.text",
-        (row_id, case_id, leg, speaker, lang, text, call_id, now()),
+        (row_id, case_id, leg, speaker, lang, redact(text), call_id, now()),
     )
     conn.commit()
 
@@ -281,6 +365,8 @@ def reset_db() -> None:
     conn.executescript("""
         DROP TABLE IF EXISTS kase;
         DROP TABLE IF EXISTS mandate_rule;
+        DROP TABLE IF EXISTS policy_event;
+        DROP TABLE IF EXISTS decision_request;
         DROP TABLE IF EXISTS consult;
         DROP TABLE IF EXISTS violation;
         DROP TABLE IF EXISTS utterance;

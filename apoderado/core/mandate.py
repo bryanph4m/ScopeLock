@@ -1,33 +1,21 @@
-"""The Mandate. Write tests first (tests/test_mandate.py) — this is pure logic, no telephony.
-
-Two enforcement layers, and the order matters:
-  Layer 1 (structural): forbidden verbs have no corresponding @on_action handler anywhere
-  in apoderado/agents/institution.py. There is no code path that reaches them.
-  Layer 2 (the guard): every candidate action on the institution leg is checked here first,
-  against the per-case rules stored in mandate_rule. Layer 2 is what still catches a
-  forbidden verb if it were ever wired up by mistake, and it's what produces the
-  violation log the console lights up red.
-"""
+"""Compatibility constants and legacy entry points for the tri-state policy service."""
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import dataclass
+from types import SimpleNamespace
 
-from apoderado.agents.scripts import REFUSAL
 from apoderado.core import db
 
-# allowed
-DEFAULT_MANDATE: dict[str, bool] = {
-    "ask_reason": True,       # why was it denied
-    "request_ref": True,      # get a reference number
-    "request_written": True,  # ask for the policy in writing
-    "escalate": True,         # ask for a supervisor
-    "reschedule": True,
-    # never
-    "agree_payment": False,
-    "accept_settlement": False,
-    "change_coverage": False,
-    "disclose_ssn": False,
+DEFAULT_MANDATE: dict[str, str] = {
+    "ask_reason": "allowed",
+    "request_ref": "allowed",
+    "request_written": "allowed",
+    "escalate": "requires_holder",
+    "reschedule": "requires_holder",
+    "agree_payment": "forbidden",
+    "accept_settlement": "forbidden",
+    "change_coverage": "forbidden",
+    "disclose_ssn": "forbidden",
 }
 
 # Plain data describing each verb, shared by apoderado/agents/institution.py (for intent
@@ -55,21 +43,23 @@ class MandateNotConfirmed(Exception):
     """Raised when the institution leg is opened before the holder has confirmed the mandate aloud."""
 
 
-@dataclass
-class GuardResult:
-    blocked: bool
-    substitute: str | None = None
+def create_case_mandate(case_id: str,
+                        overrides: dict[str, bool | str] | None = None) -> None:
+    from apoderado.core.policy import PolicyService
 
-
-def create_case_mandate(case_id: str, overrides: dict[str, bool] | None = None) -> None:
-    rules = dict(DEFAULT_MANDATE)
-    if overrides:
-        rules.update(overrides)
-    db.create_mandate_rules(case_id, rules)
+    normalized: dict[str, str] = {}
+    for verb, value in (overrides or {}).items():
+        if isinstance(value, bool):
+            normalized[verb] = DEFAULT_MANDATE.get(verb, "allowed") if value else "forbidden"
+        else:
+            normalized[verb] = value
+    PolicyService().create_draft(case_id, normalized)
 
 
 def confirm(case_id: str, utterance: str) -> None:
-    db.confirm_mandate(case_id, utterance)
+    from apoderado.core.policy import PolicyService
+
+    PolicyService().confirm_mandate(case_id, utterance)
 
 
 def is_confirmed(case_id: str) -> bool:
@@ -85,15 +75,14 @@ def lookup(case_id: str, verb: str) -> sqlite3.Row | None:
     return db.mandate_rule(case_id, verb)
 
 
-def guard(case_id: str, intent: str, text: str) -> GuardResult:
-    """Every candidate utterance the institution-leg agent would speak passes through here."""
-    rule = lookup(case_id, intent)
-    if rule is None or not rule["allowed"]:
+def guard(case_id: str, intent: str, text: str) -> SimpleNamespace:
+    """Deprecated baseline adapter; institution-side code uses PolicyService directly."""
+    from apoderado.core.policy import PolicyService
+
+    decision = PolicyService().evaluate_action(
+        case_id, intent, text, source="mandate_compat"
+    )
+    blocked = not decision.may_execute
+    if blocked:
         db.log_violation(case_id, intent, trigger=text)
-        substitute = REFUSAL.get(
-            intent,
-            "I'm not authorized to do that on this call. "
-            "I can get a reference number and have her call back about that.",
-        )
-        return GuardResult(blocked=True, substitute=substitute)
-    return GuardResult(blocked=False)
+    return SimpleNamespace(blocked=blocked, substitute=decision.refusal)
