@@ -1,0 +1,18 @@
+[project]
+name = "apoderado"
+version = "0.1.0"
+description = "The mother speaks Spanish to an agent that speaks English to the institution."
+requires-python = ">=3.11"
+dependencies = [
+    "guava-sdk",
+    "fastapi",
+    "uvicorn[standard]",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
