@@ -6,3 +6,4 @@ apoderado.db
 apoderado.db-wal
 apoderado.db-shm
 .env
+.gstack/
