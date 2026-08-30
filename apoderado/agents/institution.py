@@ -146,6 +146,8 @@ def on_refusal_said(call: guava.Call):
 @institution.on_action_request
 @safe
 def on_action_request(call: guava.Call, request: str) -> SuggestedAction | None:
+    from apoderado.core.policy import PolicyService
+
     case_id = call.get_variable("case_id")
     suggestions = _intent_recognizer.classify(request)
     if not suggestions:
@@ -153,11 +155,17 @@ def on_action_request(call: guava.Call, request: str) -> SuggestedAction | None:
     action = suggestions[0]
     key = action.key
 
-    if key in mandate.FORBIDDEN_ACTIONS:
-        # Layer 2: the guard. Logs the violation and produces the verbatim refusal.
-        result = mandate.guard(case_id, key, request)
-        call.set_task("refusal", checklist=[Say(statement=result.substitute)])
-        return None  # never becomes an action — Layer 1 means there's no handler to run anyway.
+    decision = PolicyService().evaluate_action(
+        case_id, key, request, source="institution_agent"
+    )
+    if decision.requires_holder:
+        # The registered handlers for these verbs open the holder consult; they do not
+        # execute the institution-side choice themselves.
+        consult.queue_holder_verb(case_id, key)
+        return action
+    if not decision.may_execute:
+        call.set_task("refusal", checklist=[Say(statement=decision.refusal)])
+        return None
 
     return action
 

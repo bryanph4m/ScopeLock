@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import inspect
 import sqlite3
+from types import SimpleNamespace
 
 import pytest
 
@@ -254,3 +255,74 @@ def test_decision_text_uses_the_db_redaction_seam(monkeypatch):
     assert row["question_es"] == "redacted:Q-es"
     assert row["answer_es"] == "redacted:A-es"
     assert row["answer_en"] == "redacted:A-en"
+
+
+def test_forbidden_verbs_have_no_executable_institution_handler():
+    from apoderado.agents import institution
+
+    assert institution.DEFINED_TASKS.isdisjoint(mandate.FORBIDDEN_ACTIONS)
+
+
+@pytest.mark.parametrize("verb", sorted(mandate.ALLOWED_ACTIONS))
+def test_every_normally_safe_verb_passes_through_policy_service(
+    monkeypatch, verb
+):
+    from apoderado.agents import institution
+
+    case_id = make_case()
+    action = SimpleNamespace(key=verb)
+    monkeypatch.setattr(
+        institution._intent_recognizer,
+        "classify",
+        lambda request: [action],
+    )
+    evaluated = []
+
+    def fake_evaluate(self, case_id_arg, verb_arg, trigger, source):
+        evaluated.append((case_id_arg, verb_arg, trigger, source))
+        requires_holder = verb_arg in mandate.NEEDS_HOLDER_DECISION
+        return policy.PolicyDecision(
+            decision="requires_holder" if requires_holder else "allowed",
+            may_execute=not requires_holder,
+            requires_holder=requires_holder,
+            refusal=None,
+            audit_event_id="evt_test",
+        )
+
+    monkeypatch.setattr(policy.PolicyService, "evaluate_action", fake_evaluate)
+    call = SimpleNamespace(
+        get_variable=lambda key: case_id,
+        set_task=lambda *args, **kwargs: None,
+    )
+
+    returned = institution.on_action_request(call, f"request for {verb}")
+
+    assert returned is action
+    assert evaluated == [
+        (case_id, verb, f"request for {verb}", "institution_agent")
+    ]
+
+
+def test_per_case_restriction_blocks_safe_verb_at_institution_call_site(monkeypatch):
+    from apoderado.agents import institution
+
+    case_id = make_case()
+    service = policy.PolicyService()
+    service.create_draft(case_id)
+    service.restrict_action(case_id, "ask_reason")
+    action = SimpleNamespace(key="ask_reason")
+    monkeypatch.setattr(
+        institution._intent_recognizer,
+        "classify",
+        lambda request: [action],
+    )
+    tasks = []
+    call = SimpleNamespace(
+        get_variable=lambda key: case_id,
+        set_task=lambda *args, **kwargs: tasks.append((args, kwargs)),
+    )
+
+    returned = institution.on_action_request(call, "Why was the claim denied?")
+
+    assert returned is None
+    assert tasks and tasks[0][0][0] == "refusal"
