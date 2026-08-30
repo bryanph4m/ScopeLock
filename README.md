@@ -27,6 +27,7 @@ The product's success metric is not simply time saved. It is:
 - [Safety and privacy](#safety-and-privacy)
 - [Project structure](#project-structure)
 - [Design decisions](#design-decisions)
+- [License](#license)
 - [Hackathon and responsible-use note](#hackathon-and-responsible-use-note)
 
 ## Purpose
@@ -335,6 +336,10 @@ MCP is valuable for inspection, control, testing, and future integrations. It is
 ### Why a policy engine instead of a stronger prompt?
 
 Prompts influence model behavior. ScopeLock controls executable capability. Forbidden handlers do not exist, unknown actions default to blocked, and every recognized verb is evaluated against a persisted per-case mandate.
+
+## License
+
+ScopeLock is available under the [MIT License](LICENSE).
 
 ## Hackathon and responsible-use note
 
