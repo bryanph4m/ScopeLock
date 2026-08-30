@@ -7,6 +7,8 @@ dependencies = [
     "guava-sdk",
     "fastapi",
     "uvicorn[standard]",
+    "python-dotenv",
+    "mcp>=2,<3",
 ]
 
 [dependency-groups]
