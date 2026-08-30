@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import time
 
-from apoderado.core import db, mandate
+from scopelock.core import db, mandate
 
 # case_id -> {"household": Call | None, "institution": Call | None, "turn": str}
 ACTIVE: dict[str, dict] = {}

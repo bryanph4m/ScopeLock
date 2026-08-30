@@ -42,10 +42,10 @@ stubs — the interface below is frozen and won't change shape, only implementat
 
 ## Frozen interface contract
 
-### From Person A (`apoderado/core/policy.py`, `consult.py`, `db.py`)
+### From Person A (`scopelock/core/policy.py`, `consult.py`, `db.py`)
 
 ```python
-# apoderado/core/policy.py
+# scopelock/core/policy.py
 @dataclass
 class PolicyDecision:
     decision: str          # "allowed" | "requires_holder" | "forbidden"
@@ -61,11 +61,11 @@ class PolicyService:
     def get_mandate(self, case_id: str) -> list[dict]: ...   # verb, disposition, confirmed_by_holder, confirmed_utterance
     def confirm_mandate(self, case_id: str, utterance: str) -> None: ...
 
-# apoderado/core/consult.py (decision_request lifecycle)
+# scopelock/core/consult.py (decision_request lifecycle)
 def request_holder_decision(case_id: str, verb: str, question_en: str, question_es: str) -> str: ...  # -> decision_request.id
 def resolve_holder_decision(decision_id: str, answer_es: str, answer_en: str, latency_ms: int) -> None: ...  # decided_by is always "holder", not caller-settable
 
-# apoderado/core/db.py — new/changed schema
+# scopelock/core/db.py — new/changed schema
 # mandate_rule.disposition TEXT CHECK(disposition IN ('allowed','requires_holder','forbidden'))
 # kase.state TEXT IN (intake|mandate_draft|mandated|awaiting_institution|connecting_holder|
 #                      representing|consulting_holder|closing|closed|interrupted)
@@ -74,15 +74,15 @@ def resolve_holder_decision(decision_id: str, answer_es: str, answer_en: str, la
 #                   status, decided_by, latency_ms, created_at, resolved_at)
 ```
 
-### From Person C (`apoderado/core/audit.py`, `redact.py`)
+### From Person C (`scopelock/core/audit.py`, `redact.py`)
 
 ```python
-# apoderado/core/audit.py
+# scopelock/core/audit.py
 def record_event(case_id: str, verb: str, disposition: str, source: str,
                   trigger_redacted: str | None, result: str) -> str: ...  # -> policy_event.id
 def get_audit_report(case_id: str) -> list[dict]: ...  # chronological, redacted
 
-# apoderado/core/redact.py
+# scopelock/core/redact.py
 def redact(text: str) -> str: ...  # masks SSN-like (\d{3}-\d{2}-\d{4} and spoken variants) and
                                     # member/account-ID-shaped substrings before persistence/display
 ```
@@ -96,5 +96,5 @@ unchanged) until Person C's branch lands.
 ## What NOT to touch
 
 Don't add abstractions the spec doesn't ask for (no auth, no multi-tenancy, no new
-frontend framework — see spec §3.3 non-goals). Reset `apoderado.db` instead of writing
+frontend framework — see spec §3.3 non-goals). Reset `scopelock.db` instead of writing
 a migration framework (spec §8.2) — the database is disposable for the hackathon.

@@ -14,13 +14,13 @@ import guava
 from guava import Agent, Field, Say
 from guava.events import AgentSpeechEvent, CallerSpeechEvent
 
-from apoderado.agents import institution, scripts
-from apoderado.core import consult, db, mandate, relay, translate
-from apoderado.core.util import safe
+from scopelock.agents import institution, scripts
+from scopelock.core import consult, db, mandate, relay, translate
+from scopelock.core.util import safe
 
 household = Agent(
-    name="Apoderado",
-    organization="Apoderado",
+    name="ScopeLock",
+    organization="ScopeLock",
     purpose="Take a household's case in Spanish and represent them to an institution.",
 )
 
@@ -34,7 +34,7 @@ relay.HOUSEHOLD_AGENT = household
 @safe
 def on_call_start(call: guava.Call):
     call.set_language_mode(primary="spanish", secondary=["english"])
-    call.set_persona(organization_name="Apoderado")
+    call.set_persona(organization_name="ScopeLock")
 
     case_id = call.get_variable("case_id")
     if case_id:
@@ -44,7 +44,7 @@ def on_call_start(call: guava.Call):
         call.reach_person(
             contact_full_name=row["holder_name"],
             greeting=(
-                f"Hola, soy Apoderado. El representante de {row['institution']} esta en la "
+                f"Hola, soy ScopeLock. El representante de {row['institution']} esta en la "
                 "linea ahora mismo sobre su caso. ¿Puede hablar?"
             ),
             voicemail_message="Por favor devuelvanos la llamada; el representante esta esperando en la linea.",

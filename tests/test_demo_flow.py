@@ -1,8 +1,8 @@
 """Pure state-machine walkthrough for the judge demo path; no Guava calls."""
 from __future__ import annotations
 
-from apoderado.core import db
-from apoderado.core.policy import PolicyService
+from scopelock.core import db
+from scopelock.core.policy import PolicyService
 
 
 def _case() -> str:

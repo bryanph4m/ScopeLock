@@ -1,8 +1,8 @@
 """C5 — the Callback Card. Assembled during the call, not after."""
 from __future__ import annotations
 
-from apoderado.agents.scripts import CARD_READBACK_INTRO_ES
-from apoderado.core import db
+from scopelock.agents.scripts import CARD_READBACK_INTRO_ES
+from scopelock.core import db
 
 
 def add_asked(case_id: str, text: str) -> None:

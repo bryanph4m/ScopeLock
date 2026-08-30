@@ -7,7 +7,7 @@ contract and integration order. Spec: `docs/build-spec.md` §6, §8, §9, §14.1
 
 The current mandate check is a boolean (`mandate_rule.allowed INTEGER`) and is only
 ever consulted for verbs already hardcoded as forbidden
-(`apoderado/agents/institution.py:156`, `if key in mandate.FORBIDDEN_ACTIONS`). A
+(`scopelock/agents/institution.py:156`, `if key in mandate.FORBIDDEN_ACTIONS`). A
 holder who verbally restricts a normally-safe verb (e.g. "don't let them reschedule")
 is silently ignored — the guard never runs for that verb. This branch replaces the
 boolean with the spec's three-state disposition and fixes the call site so every
@@ -15,23 +15,23 @@ verb, not just the hardcoded-forbidden ones, passes through the policy check.
 
 ## Files you own
 
-- `apoderado/core/policy.py` — **new**. `PolicyService` + `PolicyDecision` per the
+- `scopelock/core/policy.py` — **new**. `PolicyService` + `PolicyDecision` per the
   frozen interface in `docs/tasks/README.md`.
-- `apoderado/core/mandate.py` — becomes a thin compatibility facade: keep
+- `scopelock/core/mandate.py` — becomes a thin compatibility facade: keep
   `ALLOWED_ACTIONS`/`FORBIDDEN_ACTIONS`/`NEEDS_HOLDER_DECISION` (institution.py's
   intent classifier still imports these), but the actual decision logic moves into
   `policy.py`. Delete `guard()`/`GuardResult` once `institution.py` calls
   `PolicyService.evaluate_action()` directly.
-- `apoderado/core/db.py` — schema changes only (see README contract): add
+- `scopelock/core/db.py` — schema changes only (see README contract): add
   `mandate_rule.disposition`, `policy_event`, `decision_request` tables; migrate
   `kase.state` values to the 9-state list in spec §8.1. Since the DB is disposable
   for the hackathon (spec §8.2), just change `SCHEMA` and have people run
-  `db.reset_db()` / delete `apoderado.db` — no migration framework.
-- `apoderado/core/consult.py` — replace with (or rename into) the
+  `db.reset_db()` / delete `scopelock.db` — no migration framework.
+- `scopelock/core/consult.py` — replace with (or rename into) the
   `decision_request` lifecycle: `request_holder_decision()` /
   `resolve_holder_decision()`. Don't keep two competing decision ledgers (spec §8.4)
   — pick one and update `household.py`'s consult call sites to match.
-- `apoderado/agents/institution.py` — fix `on_action_request` (line ~146) to call
+- `scopelock/agents/institution.py` — fix `on_action_request` (line ~146) to call
   `PolicyService.evaluate_action(case_id, key, request, source="institution_agent")`
   for **every** classified verb, not just ones in `FORBIDDEN_ACTIONS`. This is the
   one bug-fix line that matters most for the demo (spec §6.3).
@@ -49,7 +49,7 @@ verb, not just the hardcoded-forbidden ones, passes through the policy check.
 
 ## Dependency you need (stub if missing)
 
-`apoderado/core/audit.py` and `apoderado/core/redact.py` are Person C's. If they
+`scopelock/core/audit.py` and `scopelock/core/redact.py` are Person C's. If they
 don't exist yet on your branch:
 
 ```python

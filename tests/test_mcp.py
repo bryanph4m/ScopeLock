@@ -10,8 +10,8 @@ import anyio
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
-from apoderado.core import card, db, mandate
-from apoderado.mcp import server as mcp_server
+from scopelock.core import card, db, mandate
+from scopelock.mcp import server as mcp_server
 
 
 @pytest.fixture(autouse=True)
@@ -21,7 +21,7 @@ def isolated_db(tmp_path, monkeypatch):
     if existing is not None:
         existing.close()
         del db._local.conn
-    monkeypatch.setattr(db, "DB_PATH", tmp_path / "apoderado.db")
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "scopelock.db")
     db.reset_db()
     yield
     current = getattr(db._local, "conn", None)

@@ -1,5 +1,5 @@
 [project]
-name = "apoderado"
+name = "scopelock"
 version = "0.1.0"
 description = "The mother speaks Spanish to an agent that speaks English to the institution."
 requires-python = ">=3.11"

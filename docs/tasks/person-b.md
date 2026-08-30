@@ -5,20 +5,20 @@ contract and integration order. Spec: `docs/build-spec.md` §5, §7, §9, §14.1
 
 ## Why this exists
 
-There is no `apoderado/mcp/` directory at all right now. An MCP server exposing case
+There is no `scopelock/mcp/` directory at all right now. An MCP server exposing case
 policy and audit information is a **required demo outcome** (spec §3.1, item 11), not
 an optional extra — the build isn't demo-ready without it regardless of how good the
 phone flow is.
 
 ## Files you own
 
-- `apoderado/mcp/__init__.py` — **new**, empty is fine.
-- `apoderado/mcp/schemas.py` — **new**. Typed input/output models (pydantic or plain
+- `scopelock/mcp/__init__.py` — **new**, empty is fine.
+- `scopelock/mcp/schemas.py` — **new**. Typed input/output models (pydantic or plain
   dataclasses, match whatever the official MCP Python SDK v2 expects) for every tool
   in §7.2 — mirror the JSON shapes in the spec exactly, including
   `get_active_case`'s redacted case summary and `evaluate_action`'s
   `{decision, may_execute, requires_holder, refusal, audit_event_id}` output.
-- `apoderado/mcp/server.py` — **new**. Implement all 8 tools and 3 resources from
+- `scopelock/mcp/server.py` — **new**. Implement all 8 tools and 3 resources from
   spec §7.2/§7.3, run over stdio (streamable HTTP is post-demo, per spec §7.1):
   - `get_active_case`
   - `get_mandate`
@@ -29,7 +29,7 @@ phone flow is.
   - `request_holder_decision` / `resolve_holder_decision` — thin wrappers over
     Person A's `consult.py` functions. The MCP layer only creates/records requests;
     it never decides anything itself.
-  - `get_callback_card` — wraps the existing `apoderado/core/card.py` (already
+  - `get_callback_card` — wraps the existing `scopelock/core/card.py` (already
     built, no changes needed there).
   - `get_audit_report` — wraps Person C's `audit.get_audit_report()`.
   - `run_safety_scenario` — takes a list of proposed verbs, returns how ScopeLock
@@ -61,10 +61,10 @@ You're calling into Person A's not-yet-merged interface. Stub it locally so your
 server and tests run standalone:
 
 ```python
-# temporary stub in apoderado/mcp/server.py, delete at integration
+# temporary stub in scopelock/mcp/server.py, delete at integration
 class _PolicyServiceStub:
     def evaluate_action(self, case_id, verb, trigger, source):
-        from apoderado.core.policy import PolicyDecision  # once policy.py exists, or inline the dataclass shape here
+        from scopelock.core.policy import PolicyDecision  # once policy.py exists, or inline the dataclass shape here
         return PolicyDecision(decision="allowed", may_execute=True,
                                requires_holder=False, refusal=None, audit_event_id="evt_stub")
 ```
@@ -83,5 +83,5 @@ swapping the stub for the real import at merge time is a one-line change.
       row is unchanged after calling it).
 - [ ] No MCP tool can set `decided_by="agent"` or confirm a mandate — confirmation
       only ever originates from the holder voice leg (spec §12, items 5-6).
-- [ ] `uv run python -m apoderado.mcp.server` starts cleanly over stdio.
+- [ ] `uv run python -m scopelock.mcp.server` starts cleanly over stdio.
 - [ ] `uv run pytest tests/test_mcp.py -q` passes.

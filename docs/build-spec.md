@@ -1,4 +1,4 @@
-# Apoderado / ScopeLock Build Specification
+# ScopeLock Build Specification
 
 **Version:** 0.2  
 **Target:** Guava Build Night SF  
@@ -8,7 +8,7 @@
 
 ## 1. Product Summary
 
-Apoderado is a bilingual, consent-scoped voice advocate. A Spanish-speaking account holder explains a denied claim or institutional problem, confirms exactly what the advocate may do, and then hangs up. An English-speaking Guava agent handles the institution-facing leg. When the representative requests an action that only the account holder may decide, Apoderado calls the holder back in Spanish, captures the decision, and relays it in English. The holder receives a Spanish readback of what was asked, what was learned, what was agreed, and what the agent refused to do.
+ScopeLock is a bilingual, consent-scoped voice advocate. A Spanish-speaking account holder explains a denied claim or institutional problem, confirms exactly what the advocate may do, and then hangs up. An English-speaking Guava agent handles the institution-facing leg. When the representative requests an action that only the account holder may decide, ScopeLock calls the holder back in Spanish, captures the decision, and relays it in English. The holder receives a Spanish readback of what was asked, what was learned, what was agreed, and what the agent refused to do.
 
 The central product claim is:
 
@@ -22,15 +22,15 @@ The pulled repository is not an empty starter. It already contains a working arc
 
 | Existing component | Location | Current responsibility |
 |---|---|---|
-| Spanish household agent | `apoderado/agents/household.py` | Intake, mandate readback, verbal confirmation, holder callback, Spanish consults and final readback |
-| English institution agent | `apoderado/agents/institution.py` | Disclosure, institutional workflow, intent routing, refusal behavior and holder consultation |
-| Mandate guard | `apoderado/core/mandate.py` | Default allow/deny rules, confirmation gate, forbidden-action logging |
-| Two-leg relay | `apoderado/core/relay.py` | Pairs household and institution sessions and controls whose turn is active |
-| Decision consultation | `apoderado/core/consult.py` | Translates a representative's question, obtains the holder's answer and returns it to the institution leg |
-| Callback Card | `apoderado/core/card.py` | Builds the final Spanish readback |
-| Persistence | `apoderado/core/db.py` | SQLite cases, rules, consults, violations, transcripts and cards |
-| Translation | `apoderado/core/translate.py` | Uses Guava's LLM helper for conversational English/Spanish translation |
-| Live console | `apoderado/api/server.py`, `apoderado/console/index.html` | Displays the two transcripts, mandate, refusal state, callback card and decision count |
+| Spanish household agent | `scopelock/agents/household.py` | Intake, mandate readback, verbal confirmation, holder callback, Spanish consults and final readback |
+| English institution agent | `scopelock/agents/institution.py` | Disclosure, institutional workflow, intent routing, refusal behavior and holder consultation |
+| Mandate guard | `scopelock/core/mandate.py` | Default allow/deny rules, confirmation gate, forbidden-action logging |
+| Two-leg relay | `scopelock/core/relay.py` | Pairs household and institution sessions and controls whose turn is active |
+| Decision consultation | `scopelock/core/consult.py` | Translates a representative's question, obtains the holder's answer and returns it to the institution leg |
+| Callback Card | `scopelock/core/card.py` | Builds the final Spanish readback |
+| Persistence | `scopelock/core/db.py` | SQLite cases, rules, consults, violations, transcripts and cards |
+| Translation | `scopelock/core/translate.py` | Uses Guava's LLM helper for conversational English/Spanish translation |
+| Live console | `scopelock/api/server.py`, `scopelock/console/index.html` | Displays the two transcripts, mandate, refusal state, callback card and decision count |
 | Test suite | `tests/` | Structural mandate tests plus optional Guava role-play tests |
 | Demo runbook | `demo/script.md` | Existing four-minute walkthrough; must be cut to the event's two-minute preliminary format |
 
@@ -274,7 +274,7 @@ Replace `allowed INTEGER` with `disposition TEXT` constrained to:
 allowed | requires_holder | forbidden
 ```
 
-Because the database is disposable for the hackathon, reset `apoderado.db` rather than writing a migration framework.
+Because the database is disposable for the hackathon, reset `scopelock.db` rather than writing a migration framework.
 
 ### 8.3 `policy_event`
 
@@ -321,7 +321,7 @@ guava/
 ├── pyproject.toml
 ├── docs/
 │   └── build-spec.md                    # This specification
-├── apoderado/
+├── scopelock/
 │   ├── agents/
 │   │   ├── household.py                 # Spanish intake, consent, holder callback
 │   │   ├── institution.py               # English representation and action handling
@@ -365,7 +365,7 @@ guava/
 5. The agent reads the final scope verbatim in Spanish.
 6. A confirmation parser accepts only a clear affirmative. Ambiguous or negative responses repeat or end the flow; they never confirm the mandate.
 7. The institution representative calls `INSTITUTION_NUMBER`.
-8. Apoderado performs the AI/recording disclosure and pairs the newest confirmed case.
+8. ScopeLock performs the AI/recording disclosure and pairs the newest confirmed case.
 9. The household agent calls the holder back and verifies that the intended person answered.
 10. Every institution-side action request goes to `PolicyService.evaluate_action()`.
 11. `allowed` actions execute; `forbidden` actions receive a verbatim refusal; `requires_holder` actions create a decision request and switch the active turn to the household leg.
@@ -447,8 +447,8 @@ All endpoints are localhost-only for the demo. Replace wildcard CORS with explic
 uv sync
 uv run pytest -q
 uv run main.py
-uv run uvicorn apoderado.api.server:app --port 8000
-uv run python -m apoderado.mcp.server
+uv run uvicorn scopelock.api.server:app --port 8000
+uv run python -m scopelock.mcp.server
 ```
 
 Use the official MCP Inspector only after the stdio server passes in-process tests.
@@ -514,10 +514,10 @@ The preliminary judging slot is two minutes, so do not attempt the current four-
 | Time | Beat |
 |---:|---|
 | 0:00–0:15 | “You can delegate the phone call without delegating your decisions.” Show the confirmed Spanish mandate. |
-| 0:15–0:35 | Judge calls the institution number; Apoderado discloses that it is an AI and connects the holder callback. |
-| 0:35–1:00 | Judge gives the denial reason/reference number and asks one holder-only question. Apoderado consults the holder in Spanish and returns the answer in English. |
+| 0:15–0:35 | Judge calls the institution number; ScopeLock discloses that it is an AI and connects the holder callback. |
+| 0:35–1:00 | Judge gives the denial reason/reference number and asks one holder-only question. ScopeLock consults the holder in Spanish and returns the answer in English. |
 | 1:00–1:25 | Judge requests payment authorization or an SSN. The agent refuses verbatim; the policy chip and audit event turn red. |
-| 1:25–1:45 | Apoderado reads the Callback Card in Spanish. |
+| 1:25–1:45 | ScopeLock reads the Callback Card in Spanish. |
 | 1:45–2:00 | Show the ledger: holder decisions, agent decisions, refusals and sensitive disclosures. End on the metric, not the architecture. |
 
 ### Submission evidence

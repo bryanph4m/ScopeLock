@@ -4,9 +4,9 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from apoderado.api.server import app
-from apoderado.core import db
-from apoderado.core.redact import ID_REDACTION, SSN_REDACTION, redact
+from scopelock.api.server import app
+from scopelock.core import db
+from scopelock.core.redact import ID_REDACTION, SSN_REDACTION, redact
 
 
 @pytest.fixture(autouse=True)

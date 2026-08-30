@@ -14,8 +14,8 @@ load_dotenv()  # must run before importing the agents: Agent() reads GUAVA_API_K
 from guava import Runner
 from guava.logging_utils import configure_logging
 
-from apoderado.agents.household import household
-from apoderado.agents.institution import institution
+from scopelock.agents.household import household
+from scopelock.agents.institution import institution
 
 configure_logging()
 

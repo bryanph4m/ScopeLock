@@ -1,12 +1,12 @@
 # ScopeLock
 
-### Apoderado: a bilingual voice advocate that can make the call without taking away the caller's decisions
+### ScopeLock: a bilingual voice advocate that can make the call without taking away the caller's decisions
 
 > **Delegate the phone call without delegating your decisions.** Guava gives the advocate a voice; ScopeLock gives it enforceable boundaries.
 
 [Guava Voice AI Hackathon: Build Night SF](https://luma.com/678a9u02?pk=g-OSEmgeixjBad0fo) · Built with the [Guava voice platform](https://goguava.ai/) · Hackathon prototype
 
-ScopeLock powers **Apoderado**, a Spanish-first voice advocate for difficult institutional calls. An account holder explains the problem in Spanish, hears and confirms a precise mandate, and can hang up. A second Guava agent handles the institution-facing conversation in English. If the representative asks for a consequential decision, Apoderado calls the holder back, asks in plain Spanish, and relays the holder's answer. It never invents authority.
+ScopeLock is a Spanish-first voice advocate for difficult institutional calls. An account holder explains the problem in Spanish, hears and confirms a precise mandate, and can hang up. A second Guava agent handles the institution-facing conversation in English. If the representative asks for a consequential decision, ScopeLock calls the holder back, asks in plain Spanish, and relays the holder's answer. It never invents authority.
 
 The product's success metric is not simply time saved. It is:
 
@@ -40,7 +40,7 @@ It is designed for moments where three things are simultaneously true:
 2. The institution expects a real-time voice conversation.
 3. Some answers can be delegated, while other decisions must remain with the account holder.
 
-Apoderado demonstrates this through a simulated claim-denial call, but the underlying pattern applies to billing disputes, appointment coordination, utilities, benefits, and other regulated or high-consequence workflows.
+ScopeLock demonstrates this through a simulated claim-denial call, but the underlying pattern applies to billing disputes, appointment coordination, utilities, benefits, and other regulated or high-consequence workflows.
 
 ## The problem
 
@@ -67,15 +67,15 @@ The holder may narrow the mandate, but neither the holder, the voice agent, nor 
 ## How it works
 
 1. The account holder calls the household Guava number.
-2. Apoderado starts in Spanish, collects the case, and creates a draft mandate.
+2. ScopeLock starts in Spanish, collects the case, and creates a draft mandate.
 3. The agent reads the allowed, holder-only, and forbidden actions aloud in Spanish.
 4. Only a clear affirmative confirms the mandate and opens the institution workflow.
 5. The institution representative calls the second Guava number.
-6. Apoderado gives a scripted AI/recording disclosure before any model-driven turn.
+6. ScopeLock gives a scripted AI/recording disclosure before any model-driven turn.
 7. The household agent automatically calls the holder back and verifies that the intended person answered.
 8. Every proposed institution-side verb is evaluated by `PolicyService.evaluate_action()`.
 9. Allowed actions proceed, holder-only actions trigger a bilingual consultation, and forbidden actions receive a verbatim refusal.
-10. Apoderado closes with a Spanish Callback Card covering what was asked, learned, agreed, refused, and what happens next.
+10. ScopeLock closes with a Spanish Callback Card covering what was asked, learned, agreed, refused, and what happens next.
 11. The same redacted policy, decision ledger, and audit report are available to the console and MCP clients.
 
 ## Architecture
@@ -188,9 +188,9 @@ Raw transcripts and sensitive identifiers are intentionally not MCP resources. M
 | Time | What judges see | What it proves |
 |---:|---|---|
 | 0:00–0:15 | “Delegate the call without delegating your decisions.” Show the confirmed Spanish mandate. | Clear purpose and machine-readable consent |
-| 0:15–0:35 | A judge calls the institution number; Apoderado discloses that it is an AI and calls the holder back. | Real Guava telephony and two-leg coordination |
-| 0:35–1:00 | The judge gives a denial reason/reference number and asks to reschedule. Apoderado consults the holder in Spanish and returns the answer in English. | Bilingual representation with holder-controlled decisions |
-| 1:00–1:25 | The judge asks for payment authorization or an SSN. Apoderado refuses verbatim and the policy/audit UI turns red. | Structural and runtime safety under pressure |
+| 0:15–0:35 | A judge calls the institution number; ScopeLock discloses that it is an AI and calls the holder back. | Real Guava telephony and two-leg coordination |
+| 0:35–1:00 | The judge gives a denial reason/reference number and asks to reschedule. ScopeLock consults the holder in Spanish and returns the answer in English. | Bilingual representation with holder-controlled decisions |
+| 1:00–1:25 | The judge asks for payment authorization or an SSN. ScopeLock refuses verbatim and the policy/audit UI turns red. | Structural and runtime safety under pressure |
 | 1:25–1:45 | The holder hears the Callback Card in Spanish. | Transparent closeout and accessible provenance |
 | 1:45–2:00 | Show holder decisions, refusals, sensitive disclosures, and the MCP mandate resource. | A measurable outcome and inspectable sponsor integration |
 
@@ -226,7 +226,7 @@ INSTITUTION_NUMBER=+1...
 ### 3. Reset disposable demo data
 
 ```bash
-uv run python -c "from apoderado.core import db; db.reset_db()"
+uv run python -c "from scopelock.core import db; db.reset_db()"
 ```
 
 ### 4. Start the Guava Expert
@@ -240,7 +240,7 @@ uv run main.py
 In a second terminal:
 
 ```bash
-uv run uvicorn apoderado.api.server:app --host 127.0.0.1 --port 8000
+uv run uvicorn scopelock.api.server:app --host 127.0.0.1 --port 8000
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
@@ -250,7 +250,7 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 In a third terminal:
 
 ```bash
-uv run python -m apoderado.mcp.server
+uv run python -m scopelock.mcp.server
 ```
 
 The hackathon transport is local stdio. Streamable HTTP, authentication, and remote deployment are intentionally post-demo work.
@@ -307,7 +307,7 @@ Live Guava role-play tests require a real API key and credits. Without one, they
 ScopeLock/
 ├── main.py                         # Runs both Guava phone listeners
 ├── guava.toml                      # Guava Expert entrypoint
-├── apoderado/
+├── scopelock/
 │   ├── agents/
 │   │   ├── household.py            # Spanish intake, consent, callback, consultation
 │   │   ├── institution.py          # English representation and guarded actions

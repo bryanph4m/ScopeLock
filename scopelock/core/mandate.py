@@ -4,7 +4,7 @@ from __future__ import annotations
 import sqlite3
 from types import SimpleNamespace
 
-from apoderado.core import db
+from scopelock.core import db
 
 DEFAULT_MANDATE: dict[str, str] = {
     "ask_reason": "allowed",
@@ -18,8 +18,8 @@ DEFAULT_MANDATE: dict[str, str] = {
     "disclose_ssn": "forbidden",
 }
 
-# Plain data describing each verb, shared by apoderado/agents/institution.py (for intent
-# classification) and apoderado/api/server.py (for console labels). Lives here — not in
+# Plain data describing each verb, shared by scopelock/agents/institution.py (for intent
+# classification) and scopelock/api/server.py (for console labels). Lives here — not in
 # institution.py — so that importing it never triggers guava.Agent()'s network auth.
 ALLOWED_ACTIONS: dict[str, str] = {
     "ask_reason": "the representative is explaining, or is being asked, why something happened",
@@ -45,7 +45,7 @@ class MandateNotConfirmed(Exception):
 
 def create_case_mandate(case_id: str,
                         overrides: dict[str, bool | str] | None = None) -> None:
-    from apoderado.core.policy import PolicyService
+    from scopelock.core.policy import PolicyService
 
     normalized: dict[str, str] = {}
     for verb, value in (overrides or {}).items():
@@ -57,7 +57,7 @@ def create_case_mandate(case_id: str,
 
 
 def confirm(case_id: str, utterance: str) -> None:
-    from apoderado.core.policy import PolicyService
+    from scopelock.core.policy import PolicyService
 
     PolicyService().confirm_mandate(case_id, utterance)
 
@@ -77,7 +77,7 @@ def lookup(case_id: str, verb: str) -> sqlite3.Row | None:
 
 def guard(case_id: str, intent: str, text: str) -> SimpleNamespace:
     """Deprecated baseline adapter; institution-side code uses PolicyService directly."""
-    from apoderado.core.policy import PolicyService
+    from scopelock.core.policy import PolicyService
 
     decision = PolicyService().evaluate_action(
         case_id, intent, text, source="mandate_compat"

@@ -5,7 +5,7 @@ Layer 1 of the Mandate lives here structurally: FORBIDDEN_ACTIONS never get an
 "agree to a payment plan" — a jailbreak cannot reach a task that does not exist.
 
 ALLOWED_ACTIONS / FORBIDDEN_ACTIONS themselves live in core/mandate.py (not here) so that
-importing them — e.g. from apoderado/api/server.py, for the console — never triggers
+importing them — e.g. from scopelock/api/server.py, for the console — never triggers
 guava.Agent()'s network auth. See mandate.py's module docstring.
 
 Neither party has to stay on hold waiting for the other to dial in. She calls in once to
@@ -22,13 +22,13 @@ from guava import Agent, Field, Say, SuggestedAction
 from guava.events import AgentSpeechEvent, CallerSpeechEvent
 from guava.helpers.llm import IntentRecognizer
 
-from apoderado.agents import scripts
-from apoderado.core import card, consult, db, mandate, relay
-from apoderado.core.util import safe
+from scopelock.agents import scripts
+from scopelock.core import card, consult, db, mandate, relay
+from scopelock.core.util import safe
 
 institution = Agent(
-    name="Apoderado",
-    organization="Apoderado",
+    name="ScopeLock",
+    organization="ScopeLock",
     purpose=(
         "Represent an account holder to an institution representative, strictly within a "
         "mandate the account holder confirmed aloud before this call began."
@@ -89,7 +89,7 @@ def on_call_start(call: guava.Call):
 
     row = db.get_case(case_id)
     call.set_variable("case_id", case_id)
-    call.set_persona(organization_name="Apoderado")
+    call.set_persona(organization_name="ScopeLock")
 
     if row["holder_phone"] and relay.HOUSEHOLD_AGENT is not None:
         # She already confirmed the mandate and hung up — call her back now, live, rather
@@ -146,7 +146,7 @@ def on_refusal_said(call: guava.Call):
 @institution.on_action_request
 @safe
 def on_action_request(call: guava.Call, request: str) -> SuggestedAction | None:
-    from apoderado.core.policy import PolicyService
+    from scopelock.core.policy import PolicyService
 
     case_id = call.get_variable("case_id")
     suggestions = _intent_recognizer.classify(request)

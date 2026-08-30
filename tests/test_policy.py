@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from apoderado.core import consult, db, mandate, policy, relay
+from scopelock.core import consult, db, mandate, policy, relay
 
 
 @pytest.fixture(autouse=True)
@@ -258,7 +258,7 @@ def test_decision_text_uses_the_db_redaction_seam(monkeypatch):
 
 
 def test_forbidden_verbs_have_no_executable_institution_handler():
-    from apoderado.agents import institution
+    from scopelock.agents import institution
 
     assert institution.DEFINED_TASKS.isdisjoint(mandate.FORBIDDEN_ACTIONS)
 
@@ -267,7 +267,7 @@ def test_forbidden_verbs_have_no_executable_institution_handler():
 def test_every_normally_safe_verb_passes_through_policy_service(
     monkeypatch, verb
 ):
-    from apoderado.agents import institution
+    from scopelock.agents import institution
 
     case_id = make_case()
     action = SimpleNamespace(key=verb)
@@ -304,7 +304,7 @@ def test_every_normally_safe_verb_passes_through_policy_service(
 
 
 def test_per_case_restriction_blocks_safe_verb_at_institution_call_site(monkeypatch):
-    from apoderado.agents import institution
+    from scopelock.agents import institution
 
     case_id = make_case()
     service = policy.PolicyService()

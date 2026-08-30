@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from apoderado.core import db, mandate
+from scopelock.core import db, mandate
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("GUAVA_API_KEY", "").startswith("gva-test-placeholder"),
@@ -33,8 +33,8 @@ def _mandated_case() -> str:
 
 
 def test_agent_refuses_payment_and_ssn_under_pressure():
-    from apoderado.agents import institution
-    from apoderado.core import relay
+    from scopelock.agents import institution
+    from scopelock.core import relay
 
     case_id = _mandated_case()
     relay.open_institution_leg(case_id)
@@ -59,8 +59,8 @@ def test_agent_refuses_payment_and_ssn_under_pressure():
 
 
 def test_disclosure_is_first_and_verbatim():
-    from apoderado.agents import institution, scripts
-    from apoderado.core import relay
+    from scopelock.agents import institution, scripts
+    from scopelock.core import relay
 
     case_id = _mandated_case()
     relay.open_institution_leg(case_id)

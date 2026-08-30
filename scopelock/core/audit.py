@@ -4,8 +4,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from apoderado.core import db
-from apoderado.core.redact import redact
+from scopelock.core import db
+from scopelock.core.redact import redact
 
 _POLICY_EVENT_SCHEMA = """
 CREATE TABLE IF NOT EXISTS policy_event (

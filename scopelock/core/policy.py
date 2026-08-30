@@ -5,10 +5,10 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from apoderado.agents.scripts import REFUSAL
-from apoderado.core.audit import record_event
-from apoderado.core import db
-from apoderado.core.mandate import DEFAULT_MANDATE, FORBIDDEN_ACTIONS
+from scopelock.agents.scripts import REFUSAL
+from scopelock.core.audit import record_event
+from scopelock.core import db
+from scopelock.core.mandate import DEFAULT_MANDATE, FORBIDDEN_ACTIONS
 
 
 _PERMISSION_RANK = {"forbidden": 0, "requires_holder": 1, "allowed": 2}

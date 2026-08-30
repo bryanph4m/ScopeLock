@@ -1,7 +1,7 @@
 """Holder decision lifecycle and live-call compatibility coordination."""
 from __future__ import annotations
 
-from apoderado.core import db, relay, translate
+from scopelock.core import db, relay, translate
 
 # case_id -> pending live-call metadata. Persistence lives only in decision_request.
 PENDING: dict[str, dict] = {}

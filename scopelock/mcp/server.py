@@ -13,14 +13,14 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel, ValidationError
 
-from apoderado.core import card, db
-from apoderado.core.audit import get_audit_report as _get_audit_report
-from apoderado.core.consult import (
+from scopelock.core import card, db
+from scopelock.core.audit import get_audit_report as _get_audit_report
+from scopelock.core.consult import (
     request_holder_decision as _request_holder_decision,
     resolve_holder_decision as _resolve_holder_decision,
 )
-from apoderado.core.policy import PolicyDecision, PolicyService
-from apoderado.mcp.schemas import (
+from scopelock.core.policy import PolicyDecision, PolicyService
+from scopelock.mcp.schemas import (
     ActiveCaseOutput,
     AuditEventOutput,
     AuditReportOutput,
@@ -149,7 +149,7 @@ def _throwaway_case_copy(case_id: str) -> Iterator[str]:
 
 
 server = MCPServer(
-    name="apoderado-scopelock",
+    name="scopelock",
     description="Redacted case inspection and policy control for ScopeLock.",
 )
 

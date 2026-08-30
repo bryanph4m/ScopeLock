@@ -4,7 +4,7 @@ from __future__ import annotations
 import functools
 import logging
 
-logger = logging.getLogger("apoderado")
+logger = logging.getLogger("scopelock")
 
 
 def safe(fn):

@@ -1,4 +1,4 @@
-# Apoderado — Demo Runbook
+# ScopeLock — Demo Runbook
 
 ## Roles
 - **Teammate A** plays the mother. Must actually speak Spanish, not read phonetically.
@@ -8,9 +8,9 @@
 - **You** narrate almost nothing. The console carries it.
 
 ## Before you go on stage
-1. `db.reset_db()` (or delete `apoderado.db`) so the console starts from zero.
+1. `db.reset_db()` (or delete `scopelock.db`) so the console starts from zero.
 2. Start the Expert: `uv run main.py` (needs `GUAVA_API_KEY`, `HOUSEHOLD_NUMBER`, `INSTITUTION_NUMBER`).
-3. Start the console API: `uv run uvicorn apoderado.api.server:app --port 8000`, open it on the projector.
+3. Start the console API: `uv run uvicorn scopelock.api.server:app --port 8000`, open it on the projector.
 4. Queue `demo/fallback.mp4` on a second machine. Switch to it without commentary if anything breaks — never narrate a failure.
 
 ## The four minutes
@@ -31,7 +31,7 @@
 ## Why two numbers, if asked
 "Guava's `transfer()` is a handoff, and a handoff would leave her alone with the rep. So
 we kept both legs and put the policy in the middle." (Two Guava sessions, one Expert
-process, one Python object arbitrating whose turn it is — see `apoderado/core/relay.py`.)
+process, one Python object arbitrating whose turn it is — see `scopelock/core/relay.py`.)
 
 ## Why she doesn't wait on hold, if asked
 "Neither party should have to sit on a call waiting for the other. She calls in once, we

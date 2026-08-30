@@ -8,9 +8,9 @@ import time
 import uuid
 from pathlib import Path
 
-from apoderado.core.redact import redact
+from scopelock.core.redact import redact
 
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "apoderado.db"
+DB_PATH = Path(__file__).resolve().parent.parent.parent / "scopelock.db"
 
 _local = threading.local()
 

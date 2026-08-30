@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from apoderado.core import db
+from scopelock.core import db
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("GUAVA_API_KEY", "").startswith("gva-test-placeholder"),
@@ -19,7 +19,7 @@ def clean_db():
 
 
 def test_intake_completes_in_spanish_only():
-    from apoderado.agents import household
+    from scopelock.agents import household
 
     session = household.household.roleplay(
         "Eres una madre que llama porque le negaron un reclamo de seguro medico para una "
@@ -40,7 +40,7 @@ def test_intake_completes_in_spanish_only():
 
 
 def test_mandate_readback_is_the_verbatim_constant():
-    from apoderado.agents import household, scripts
+    from scopelock.agents import household, scripts
 
     session = household.household.roleplay(
         "Eres un padre que llama sobre una factura incorrecta de su compania de luz. "

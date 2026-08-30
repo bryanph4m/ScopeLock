@@ -1,7 +1,7 @@
 """Pure logic, no telephony. Write these first, per spec 5.4."""
 import pytest
 
-from apoderado.core import db, mandate
+from scopelock.core import db, mandate
 
 
 @pytest.fixture(autouse=True)
@@ -23,7 +23,7 @@ def make_case() -> str:
 
 
 def test_forbidden_verb_has_no_task():
-    from apoderado.agents import institution
+    from scopelock.agents import institution
     assert "agree_payment" not in institution.DEFINED_TASKS
     assert "accept_settlement" not in institution.DEFINED_TASKS
     assert "change_coverage" not in institution.DEFINED_TASKS
@@ -31,7 +31,7 @@ def test_forbidden_verb_has_no_task():
 
 
 def test_allowed_verbs_do_have_tasks():
-    from apoderado.agents import institution
+    from scopelock.agents import institution
     for verb in ("ask_reason", "request_ref", "request_written", "escalate", "reschedule"):
         assert verb in institution.DEFINED_TASKS
 
@@ -58,14 +58,14 @@ def test_guard_blocks_unknown_verb_by_default():
 
 
 def test_unconfirmed_mandate_blocks_bridge():
-    from apoderado.core import relay
+    from scopelock.core import relay
     case = make_case()
     with pytest.raises(mandate.MandateNotConfirmed):
         relay.open_institution_leg(case)
 
 
 def test_confirmed_mandate_allows_bridge():
-    from apoderado.core import relay
+    from scopelock.core import relay
     case = make_case()
     mandate.confirm(case, "Si, estoy de acuerdo.")
     # Should not raise.

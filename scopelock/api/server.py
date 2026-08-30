@@ -11,11 +11,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from apoderado.core import audit, card, db
-from apoderado.core.mandate import ALLOWED_ACTIONS, FORBIDDEN_ACTIONS
-from apoderado.core.redact import redact
+from scopelock.core import audit, card, db
+from scopelock.core.mandate import ALLOWED_ACTIONS, FORBIDDEN_ACTIONS
+from scopelock.core.redact import redact
 
-app = FastAPI(title="Apoderado console API")
+app = FastAPI(title="ScopeLock console API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
@@ -74,7 +74,7 @@ def _mandate_rules(case_id: str) -> list[dict]:
 
 def _mcp_readiness() -> dict[str, bool]:
     try:
-        spec = importlib.util.find_spec("apoderado.mcp.server")
+        spec = importlib.util.find_spec("scopelock.mcp.server")
     except (ImportError, ModuleNotFoundError, ValueError):
         spec = None
 
@@ -82,7 +82,7 @@ def _mcp_readiness() -> dict[str, bool]:
         return {"configured": False, "importable": False, "runnable": False, "ready": False}
 
     try:
-        module = importlib.import_module("apoderado.mcp.server")
+        module = importlib.import_module("scopelock.mcp.server")
         candidates = (
             getattr(module, "main", None),
             getattr(module, "mcp", None),
@@ -215,4 +215,4 @@ def case_report(case_id: str):
     )
 
 
-app.mount("/", StaticFiles(directory="apoderado/console", html=True), name="console")
+app.mount("/", StaticFiles(directory="scopelock/console", html=True), name="console")
