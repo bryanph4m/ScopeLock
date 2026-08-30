@@ -6,6 +6,12 @@
 
 [Guava Voice AI Hackathon: Build Night SF](https://luma.com/678a9u02?pk=g-OSEmgeixjBad0fo) · Built with the [Guava voice platform](https://goguava.ai/) · Hackathon prototype
 
+<p align="center">
+  <img src="demo/scopelock-demo.gif" alt="Forty-second ScopeLock product demo showing a Spanish mandate, an English institution call, a holder-controlled decision, blocked payment and SSN requests, and a redacted Callback Card" width="960">
+</p>
+
+<p align="center"><sub>40-second silent walkthrough · fictional, redacted demonstration data</sub></p>
+
 ScopeLock is a Spanish-first voice advocate for difficult institutional calls. An account holder explains the problem in Spanish, hears and confirms a precise mandate, and can hang up. A second Guava agent handles the institution-facing conversation in English. If the representative asks for a consequential decision, ScopeLock calls the holder back, asks in plain Spanish, and relays the holder's answer. It never invents authority.
 
 The product's success metric is not simply time saved. It is:
