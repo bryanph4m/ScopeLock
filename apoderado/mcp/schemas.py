@@ -138,7 +138,7 @@ class AuditEventOutput(BaseModel):
     case_id: str | None = None
     event_type: str | None = None
     verb: str | None = None
-    disposition: Decision | None = None
+    disposition: str | None = None
     source: str | None = None
     trigger_redacted: str | None = None
     result: str | None = None

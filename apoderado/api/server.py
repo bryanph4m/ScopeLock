@@ -51,7 +51,6 @@ def _redact_payload(value: Any) -> Any:
 
 
 def _decision_requests(case_id: str) -> list[dict]:
-    # STUB — replace with Person A's db accessor at merge. Frozen target shape stays intact.
     if not _table_exists("decision_request"):
         return []
     return [
@@ -67,8 +66,6 @@ def _decision_requests(case_id: str) -> list[dict]:
 def _mandate_rules(case_id: str) -> list[dict]:
     rules = [dict(row) for row in db.mandate_rules(case_id)]
     for rule in rules:
-        # STUB — Person A adds mandate_rule.disposition. Frozen fallback is "allowed".
-        rule.setdefault("disposition", "allowed")
         rule["verb_label"] = ALLOWED_ACTIONS.get(rule["verb"]) or FORBIDDEN_ACTIONS.get(
             rule["verb"], rule["verb"]
         )

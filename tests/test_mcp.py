@@ -108,16 +108,32 @@ def test_get_active_case_returns_only_redacted_summary_fields():
     ],
 )
 def test_mcp_evaluate_action_matches_direct_policy_service_byte_for_byte(
-    verb: str, trigger: str, source: str
+    verb: str, trigger: str, source: str, monkeypatch
 ):
     case_id = make_case()
-    direct = mcp_server.PolicyService().evaluate_action(case_id, verb, trigger, source)
+    real_service = mcp_server.PolicyService()
+    captured: dict[str, object] = {}
+
+    class CapturingPolicyService:
+        def evaluate_action(
+            self, captured_case_id: str, captured_verb: str,
+            captured_trigger: str, captured_source: str
+        ):
+            decision = real_service.evaluate_action(
+                captured_case_id, captured_verb, captured_trigger, captured_source
+            )
+            captured["decision"] = decision
+            return decision
+
+    monkeypatch.setattr(mcp_server, "PolicyService", CapturingPolicyService)
     via_mcp = call_tool(
         "evaluate_action",
         {"case_id": case_id, "verb": verb, "trigger": trigger, "source": source},
     )
 
-    direct_json = json.dumps(decision_dict(direct), sort_keys=True, separators=(",", ":"))
+    direct_json = json.dumps(
+        decision_dict(captured["decision"]), sort_keys=True, separators=(",", ":")
+    )
     mcp_json = json.dumps(via_mcp.structured_content, sort_keys=True, separators=(",", ":"))
     assert mcp_json == direct_json
 
@@ -128,23 +144,23 @@ def test_restrict_action_has_no_enable_path_and_honors_confirmation_ceiling():
     schema = next(tool.input_schema for tool in tools if tool.name == "restrict_action")
     assert set(schema["properties"]) == {"case_id", "verb"}
 
-    with pytest.raises(ToolError):
-        call_tool(
-            "restrict_action",
-            {"case_id": case_id, "verb": "agree_payment", "allowed": True},
-        )
-    assert not bool(db.mandate_rule(case_id, "agree_payment")["allowed"])
+    prohibited = call_tool(
+        "restrict_action",
+        {"case_id": case_id, "verb": "agree_payment", "allowed": True},
+    )
+    assert prohibited.structured_content["disposition"] == "forbidden"
+    assert db.mandate_rule(case_id, "agree_payment")["disposition"] == "forbidden"
 
     result = call_tool(
         "restrict_action", {"case_id": case_id, "verb": "ask_reason"}
     )
     assert result.structured_content["disposition"] == "forbidden"
-    assert not bool(db.mandate_rule(case_id, "ask_reason")["allowed"])
+    assert db.mandate_rule(case_id, "ask_reason")["disposition"] == "forbidden"
 
-    mandate.confirm(case_id, "I confirm this test mandate.")
+    mandate.confirm(case_id, "Yes, I agree.")
     with pytest.raises(ToolError):
         call_tool("restrict_action", {"case_id": case_id, "verb": "request_ref"})
-    assert bool(db.mandate_rule(case_id, "request_ref")["allowed"])
+    assert db.mandate_rule(case_id, "request_ref")["disposition"] == "allowed"
 
 
 def test_safety_scenario_isolates_the_live_case_and_cleans_up_copy():
@@ -201,7 +217,7 @@ def test_holder_resolution_cannot_accept_agent_decision_or_confirm_mandate():
 
 def test_resources_serialize_safe_structured_shapes_without_confirmation_text():
     case_id = make_case()
-    mandate.confirm(case_id, "I confirm this test mandate.")
+    mandate.confirm(case_id, "Yes, I agree.")
     card.add_asked(case_id, "Why was the test claim denied?")
     card.add_told(case_id, "The test claim needs another review.")
     card.set_reference(case_id, "TEST-REF")
@@ -226,8 +242,10 @@ def test_resources_serialize_safe_structured_shapes_without_confirmation_text():
 
     assert mandate_payload["case_id"] == case_id
     assert all("confirmed_utterance" not in rule for rule in mandate_payload["rules"])
-    assert "I confirm this test mandate." not in mandate_contents[0].content
-    assert audit_payload == {"case_id": case_id, "events": []}
+    assert "Yes, I agree." not in mandate_contents[0].content
+    assert audit_payload["case_id"] == case_id
+    assert audit_payload["events"]
+    assert all("raw_transcript" not in event for event in audit_payload["events"])
     assert card_payload == {
         "case_id": case_id,
         "asked": ["Why was the test claim denied?"],

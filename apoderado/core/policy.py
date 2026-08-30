@@ -6,15 +6,9 @@ import unicodedata
 from dataclasses import dataclass
 
 from apoderado.agents.scripts import REFUSAL
+from apoderado.core.audit import record_event
 from apoderado.core import db
 from apoderado.core.mandate import DEFAULT_MANDATE, FORBIDDEN_ACTIONS
-
-try:
-    from apoderado.core.audit import record_event
-except ImportError:
-    # STUB — replace with person C's branch at merge
-    def record_event(*args, **kwargs) -> str:
-        return "evt_stub"
 
 
 _PERMISSION_RANK = {"forbidden": 0, "requires_holder": 1, "allowed": 2}
@@ -132,6 +126,8 @@ class PolicyService:
     def restrict_action(self, case_id: str, verb: str) -> None:
         if verb not in DEFAULT_MANDATE:
             raise KeyError(f"unknown policy verb: {verb}")
+        if db.mandate_confirmed(case_id):
+            raise ValueError("confirmed mandates cannot be modified")
         db.set_mandate_disposition(case_id, verb, "forbidden")
 
     def get_mandate(self, case_id: str) -> list[dict]:

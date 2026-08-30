@@ -8,11 +8,7 @@ import time
 import uuid
 from pathlib import Path
 
-try:
-    from apoderado.core.redact import redact
-except ImportError:
-    # STUB — replace with person C's branch at merge
-    redact = lambda text: text
+from apoderado.core.redact import redact
 
 DB_PATH = Path(__file__).resolve().parent.parent.parent / "apoderado.db"
 
@@ -276,6 +272,7 @@ def record_consult(case_id: str, question_en: str, question_es: str,
         "VALUES (?, ?, 'holder_decision', ?, ?, ?, ?, 'resolved', 'holder', ?, ?, ?)",
         (
             consult_id,
+            case_id,
             redact(question_en),
             redact(question_es),
             redact(answer_es),

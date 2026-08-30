@@ -6,14 +6,20 @@ callback-card assembly, and audit reporting remain owned by their core modules.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import Any, Iterator, TypeVar
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel, ValidationError
 
-from apoderado.core import card, db, mandate
+from apoderado.core import card, db
+from apoderado.core.audit import get_audit_report as _get_audit_report
+from apoderado.core.consult import (
+    request_holder_decision as _request_holder_decision,
+    resolve_holder_decision as _resolve_holder_decision,
+)
+from apoderado.core.policy import PolicyDecision, PolicyService
 from apoderado.mcp.schemas import (
     ActiveCaseOutput,
     AuditEventOutput,
@@ -37,129 +43,6 @@ from apoderado.mcp.schemas import (
     RunSafetyScenarioOutput,
     SafetyOutcome,
 )
-
-
-try:
-    from apoderado.core.policy import PolicyDecision, PolicyService
-except ImportError:
-    # STUB — replace with person A/C's branch at merge
-    @dataclass(frozen=True)
-    class PolicyDecision:
-        decision: str
-        may_execute: bool
-        requires_holder: bool
-        refusal: str | None
-        audit_event_id: str
-
-    # STUB — replace with person A/C's branch at merge
-    class _PolicyServiceStub:
-        def create_draft(
-            self, case_id: str, overrides: dict[str, str] | None = None
-        ) -> None:
-            boolean_overrides = None
-            if overrides is not None:
-                boolean_overrides = {
-                    verb: disposition != "forbidden"
-                    for verb, disposition in overrides.items()
-                }
-            mandate.create_case_mandate(case_id, boolean_overrides)
-
-        def evaluate_action(
-            self, case_id: str, verb: str, trigger: str, source: str
-        ) -> PolicyDecision:
-            return PolicyDecision(
-                decision="allowed",
-                may_execute=True,
-                requires_holder=False,
-                refusal=None,
-                audit_event_id="evt_stub",
-            )
-
-        def restrict_action(self, case_id: str, verb: str) -> None:
-            case = db.get_case(case_id)
-            rule = db.mandate_rule(case_id, verb)
-            if case is None or rule is None:
-                raise ValueError("case or verb not found")
-            if db.mandate_confirmed(case_id):
-                raise ValueError("confirmed mandates cannot be modified")
-            if verb in mandate.FORBIDDEN_ACTIONS or not bool(rule["allowed"]):
-                raise ValueError("hard-prohibited actions cannot be modified")
-            conn = db.connect()
-            conn.execute(
-                "UPDATE mandate_rule SET allowed = 0 WHERE case_id = ? AND verb = ?",
-                (case_id, verb),
-            )
-            conn.commit()
-
-        def get_mandate(self, case_id: str) -> list[dict[str, Any]]:
-            rules: list[dict[str, Any]] = []
-            for row in db.mandate_rules(case_id):
-                allowed = bool(row["allowed"])
-                if not allowed:
-                    disposition = "forbidden"
-                elif row["verb"] in mandate.NEEDS_HOLDER_DECISION:
-                    disposition = "requires_holder"
-                else:
-                    disposition = "allowed"
-                rules.append(
-                    {
-                        "verb": row["verb"],
-                        "disposition": disposition,
-                        "confirmed_by_holder": bool(row["confirmed_by_holder"]),
-                        "confirmed_utterance": row["confirmed_utterance"],
-                    }
-                )
-            return rules
-
-    PolicyService = _PolicyServiceStub
-
-
-try:
-    from apoderado.core.consult import (
-        request_holder_decision as _request_holder_decision,
-        resolve_holder_decision as _resolve_holder_decision,
-    )
-except ImportError:
-    _STUB_DECISION_REQUESTS: dict[str, dict[str, Any]] = {}
-
-    # STUB — replace with person A/C's branch at merge
-    def _request_holder_decision(
-        case_id: str, verb: str, question_en: str, question_es: str
-    ) -> str:
-        decision_id = db.new_id("dec")
-        _STUB_DECISION_REQUESTS[decision_id] = {
-            "case_id": case_id,
-            "verb": verb,
-            "question_en": question_en,
-            "question_es": question_es,
-            "status": "pending",
-        }
-        return decision_id
-
-    # STUB — replace with person A/C's branch at merge
-    def _resolve_holder_decision(
-        decision_id: str, answer_es: str, answer_en: str, latency_ms: int
-    ) -> None:
-        request = _STUB_DECISION_REQUESTS.get(decision_id)
-        if request is None:
-            raise ValueError("decision request not found")
-        request.update(
-            {
-                "answer_es": answer_es,
-                "answer_en": answer_en,
-                "latency_ms": latency_ms,
-                "status": "resolved",
-                "decided_by": "holder",
-            }
-        )
-
-
-try:
-    from apoderado.core.audit import get_audit_report as _get_audit_report
-except ImportError:
-    # STUB — replace with person A/C's branch at merge
-    def _get_audit_report(case_id: str) -> list[dict[str, Any]]:
-        return []
 
 
 ModelT = TypeVar("ModelT", bound=BaseModel)

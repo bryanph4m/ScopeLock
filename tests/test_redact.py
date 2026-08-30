@@ -72,7 +72,7 @@ def test_ssn_is_redacted_before_transcript_and_consult_persistence():
         "SELECT text FROM utterance WHERE case_id = ?", (case_id,)
     ).fetchone()
     consult_row = conn.execute(
-        "SELECT answer_es FROM consult WHERE case_id = ?", (case_id,)
+        "SELECT answer_es FROM decision_request WHERE case_id = ?", (case_id,)
     ).fetchone()
     assert transcript_row["text"] == safe
     assert consult_row["answer_es"] == safe
