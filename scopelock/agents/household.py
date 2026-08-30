@@ -19,9 +19,10 @@ from scopelock.core import consult, db, mandate, relay, translate
 from scopelock.core.util import safe
 
 household = Agent(
-    name="ScopeLock",
-    organization="ScopeLock",
-    purpose="Take a household's case in Spanish and represent them to an institution.",
+    name=scripts.PRODUCT_NAME,
+    organization=scripts.PRODUCT_NAME,
+    purpose=scripts.HOUSEHOLD_PURPOSE,
+    pronunciations=scripts.PRODUCT_PRONUNCIATIONS,
 )
 
 # See core/relay.py's HOUSEHOLD_AGENT docstring: lets institution.py place the outbound
@@ -34,7 +35,6 @@ relay.HOUSEHOLD_AGENT = household
 @safe
 def on_call_start(call: guava.Call):
     call.set_language_mode(primary="spanish", secondary=["english"])
-    call.set_persona(organization_name="ScopeLock")
 
     case_id = call.get_variable("case_id")
     if case_id:
@@ -43,33 +43,36 @@ def on_call_start(call: guava.Call):
         row = db.get_case(case_id)
         call.reach_person(
             contact_full_name=row["holder_name"],
-            greeting=(
-                f"Hola, soy ScopeLock. El representante de {row['institution']} esta en la "
-                "linea ahora mismo sobre su caso. ¿Puede hablar?"
+            greeting=f"Hola, ¿hablo con {row['holder_name']}?",
+            voicemail_message=(
+                "Le llama ScopeLock. Por favor, devuélvanos la llamada; el representante "
+                "está esperando en la línea."
             ),
-            voicemail_message="Por favor devuelvanos la llamada; el representante esta esperando en la linea.",
         )
         return
 
     call.set_variable("caller_phone", call.call_info.from_number)
+    call.read_script(scripts.HOUSEHOLD_GREETING_ES)
     call.set_task(
         "intake",
         objective=(
-            "Understand who is calling, which institution, and what happened. "
-            "Speak only in Spanish unless she switches to English herself."
+            "The ScopeLock greeting was already spoken once. Do not greet or introduce "
+            "yourself again. Understand who is calling, which institution is involved, and "
+            "what happened. Ask one short question at a time. Speak only in Spanish unless "
+            "she switches to English herself, and do not repeat a question she already answered."
         ),
         checklist=[
             Field(key="holder_name", field_type="text", sensitive=True,
                   description="Su nombre completo"),
             Field(key="institution", field_type="text",
-                  description="El nombre de la institucion o compania"),
+                  description="El nombre de la institución o compañía"),
             Field(key="issue_type", field_type="multiple_choice",
                   choices=["denial", "billing", "reschedule", "dispute"],
                   description="El tipo de problema que tiene"),
             Field(key="issue_summary", field_type="text",
-                  description="Lo que paso, en sus propias palabras. No parafrasear."),
+                  description="Lo que pasó, en sus propias palabras. No parafrasear."),
             Field(key="member_id", field_type="text", sensitive=True, required=False,
-                  description="Su numero de miembro o de cuenta, si lo tiene a mano"),
+                  description="Su número de miembro o de cuenta, si lo tiene a mano"),
         ],
     )
 
@@ -89,16 +92,25 @@ def on_intake_done(call: guava.Call):
     call.set_variable("member_id", call.get_field("member_id") or "")
     mandate.create_case_mandate(case_id)
 
+    call.set_task("mandate_readback", checklist=[Say(statement=scripts.MANDATE_READBACK_ES)])
+
+
+@household.on_task_complete("mandate_readback")
+@safe
+def on_mandate_readback_done(call: guava.Call):
     call.set_task(
         "mandate_confirm",
         objective=(
-            "Read the mandate statement to her exactly as given, word for word, then wait "
-            "for her clear verbal yes before continuing."
+            "The scripted mandate ended with a yes-or-no question. Stay silent until she "
+            "answers, then capture her answer exactly. Do not repeat or paraphrase the "
+            "mandate, and do not repeat the confirmation question."
         ),
         checklist=[
-            Say(statement=scripts.MANDATE_READBACK_ES),
-            Field(key="mandate_confirmed", field_type="text",
-                  description="Su respuesta confirmando que esta de acuerdo, tal cual la diga"),
+            Field(
+                key="mandate_confirmed",
+                field_type="text",
+                description="Su respuesta a la confirmación, tal cual la diga",
+            ),
         ],
     )
 
@@ -109,11 +121,17 @@ def on_mandate_confirmed(call: guava.Call):
     case_id = call.get_variable("case_id")
     utterance = call.get_field("mandate_confirmed")
     mandate.confirm(case_id, utterance)
+    if not db.mandate_confirmed(case_id):
+        call.retry_task(
+            "Her answer was not a clear yes. Ask only: '¿Está de acuerdo, sí o no?' "
+            "Do not repeat or summarize the mandate."
+        )
+        return
     relay.open_institution_leg(case_id)
     call.hangup(
-        "Let her know you have everything you need and she can hang up now — she does not "
-        "need to stay on the line. Tell her you will call her back automatically the moment "
-        f"{call.get_field('institution')} calls in on the number she can give them."
+        "In one short Spanish response, tell her you have everything you need and she may "
+        "hang up. Explain that ScopeLock will call her back when the institution joins. "
+        "Do not repeat the mandate or the explanation."
     )
 
 
@@ -134,9 +152,13 @@ def on_reach_person(call: guava.Call, outcome: str):
 
     row = db.get_case(case_id)
     relay.register_household_call(case_id, call)
+    call.read_script(scripts.CONNECTED_HOLDER_ES)
     call.set_task(
         "waiting",
-        objective="Let her know she is connected and the representative is on the line. Then wait quietly.",
+        objective=(
+            "Remain completely silent until a new task arrives. Do not repeat the connection "
+            "update, add filler, or narrate that you are waiting."
+        ),
     )
     if inst_call is not None:
         institution.start_representing(inst_call, row)
@@ -156,14 +178,20 @@ def on_consult_answered(call: guava.Call):
 
     call.set_task(
         "waiting",
-        objective="Wait quietly until you have something new to tell her.",
+        objective=(
+            "Remain completely silent until a new task arrives. Do not repeat her answer, "
+            "add filler, or narrate that you are waiting."
+        ),
     )
 
 
 @household.on_task_complete("closing")
 @safe
 def on_closing_done(call: guava.Call):
-    call.hangup("Say goodbye warmly.")
+    call.hangup(
+        "Say one brief, warm goodbye in Spanish. Do not repeat the call summary and do not "
+        "say goodbye more than once."
+    )
 
 
 @household.on_caller_speech

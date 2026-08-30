@@ -316,13 +316,15 @@ def test_per_case_restriction_blocks_safe_verb_at_institution_call_site(monkeypa
         "classify",
         lambda request: [action],
     )
-    tasks = []
+    spoken = []
     call = SimpleNamespace(
         get_variable=lambda key: case_id,
-        set_task=lambda *args, **kwargs: tasks.append((args, kwargs)),
+        read_script=spoken.append,
+        set_task=lambda *args, **kwargs: pytest.fail("a refusal must not replace the active task"),
     )
 
     returned = institution.on_action_request(call, "Why was the claim denied?")
 
     assert returned is None
-    assert tasks and tasks[0][0][0] == "refusal"
+    assert len(spoken) == 1
+    assert "not authorized" in spoken[0]
