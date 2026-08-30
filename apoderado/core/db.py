@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS decision_request (
   answer_es   TEXT,
   answer_en   TEXT,
   status      TEXT NOT NULL,
-  decided_by  TEXT,
+  decided_by  TEXT CHECK(decided_by IS NULL OR decided_by = 'holder'),
   latency_ms  INTEGER,
   created_at  TEXT NOT NULL,
   resolved_at TEXT

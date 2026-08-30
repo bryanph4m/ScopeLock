@@ -1,14 +1,19 @@
 """Pure tri-state policy and persistence tests; no live Guava calls."""
 from __future__ import annotations
 
+import inspect
+import sqlite3
+
 import pytest
 
-from apoderado.core import db, mandate, policy, relay
+from apoderado.core import consult, db, mandate, policy, relay
 
 
 @pytest.fixture(autouse=True)
 def clean_db():
     db.reset_db()
+    consult.PENDING.clear()
+    consult._QUEUED_VERBS.clear()
     yield
 
 
@@ -166,3 +171,86 @@ def test_get_mandate_returns_only_the_frozen_contract_fields():
         "confirmed_by_holder",
         "confirmed_utterance",
     }
+
+
+def test_holder_decision_lifecycle_counts_only_resolved_requests():
+    case_id = make_case()
+    decision_id = consult.request_holder_decision(
+        case_id,
+        "reschedule",
+        "Does next Tuesday work?",
+        "¿Le sirve el próximo martes?",
+    )
+    pending = db.connect().execute(
+        "SELECT * FROM decision_request WHERE id = ?", (decision_id,)
+    ).fetchone()
+
+    assert pending["status"] == "pending"
+    assert pending["decided_by"] is None
+    assert consult.decision_count(case_id) == 0
+
+    consult.resolve_holder_decision(decision_id, "Sí.", "Yes.", 37)
+    resolved = db.connect().execute(
+        "SELECT * FROM decision_request WHERE id = ?", (decision_id,)
+    ).fetchone()
+
+    assert resolved["status"] == "resolved"
+    assert resolved["decided_by"] == "holder"
+    assert resolved["latency_ms"] == 37
+    assert resolved["resolved_at"]
+    assert consult.decision_count(case_id) == 1
+
+
+def test_decided_by_cannot_be_supplied_through_the_public_resolver():
+    parameters = inspect.signature(consult.resolve_holder_decision).parameters
+    assert "decided_by" not in parameters
+
+    with pytest.raises(TypeError):
+        consult.resolve_holder_decision(
+            "dec_fake",
+            "Sí.",
+            "Yes.",
+            10,
+            decided_by="agent",
+        )
+
+
+def test_decision_schema_rejects_non_holder_decider():
+    case_id = make_case()
+    decision_id = consult.request_holder_decision(case_id, "reschedule", "Q", "P")
+
+    with pytest.raises(sqlite3.IntegrityError):
+        db.connect().execute(
+            "UPDATE decision_request SET decided_by = 'agent' WHERE id = ?",
+            (decision_id,),
+        )
+
+
+def test_abandoned_decision_is_not_counted():
+    case_id = make_case()
+    consult.queue_holder_verb(case_id, "reschedule")
+    entry = consult.begin(case_id, "Does Tuesday work?", "¿Le sirve el martes?")
+
+    consult.abandon(case_id)
+
+    row = db.connect().execute(
+        "SELECT * FROM decision_request WHERE id = ?", (entry["decision_id"],)
+    ).fetchone()
+    assert row["status"] == "abandoned"
+    assert row["decided_by"] is None
+    assert consult.decision_count(case_id) == 0
+
+
+def test_decision_text_uses_the_db_redaction_seam(monkeypatch):
+    case_id = make_case()
+    monkeypatch.setattr(db, "redact", lambda text: f"redacted:{text}")
+    decision_id = consult.request_holder_decision(case_id, "reschedule", "Q-en", "Q-es")
+    consult.resolve_holder_decision(decision_id, "A-es", "A-en", 1)
+
+    row = db.connect().execute(
+        "SELECT * FROM decision_request WHERE id = ?", (decision_id,)
+    ).fetchone()
+    assert row["question_en"] == "redacted:Q-en"
+    assert row["question_es"] == "redacted:Q-es"
+    assert row["answer_es"] == "redacted:A-es"
+    assert row["answer_en"] == "redacted:A-en"
