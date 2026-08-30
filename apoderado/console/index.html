@@ -16,6 +16,7 @@
     --sent-dark: #086bd1;
     --received: #303032;
     --green: #30d158;
+    --amber: #ff9f0a;
     --grey: #8e8e93;
     --red: #ff453a;
   }
@@ -28,7 +29,7 @@
   #app {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto auto 1fr auto;
     gap: 14px;
     height: 100vh;
     padding: 14px;
@@ -36,26 +37,62 @@
   header {
     grid-column: 1 / -1;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 10px;
+    gap: 20px; padding: 6px 10px;
   }
+  .brand-row { display: flex; align-items: center; gap: 9px; }
   header h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.2px; }
   header .case-line { color: var(--dim); font-size: 13px; margin-top: 3px; }
-  #counter {
-    text-align: right; background: var(--panel); border: 1px solid var(--border);
-    border-radius: 16px; padding: 8px 16px;
+  #privacy-badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;
+    border-radius: 999px; border: 1px solid rgba(48,209,88,0.3);
+    background: rgba(48,209,88,0.1); color: var(--green);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.35px; text-transform: uppercase;
   }
-  #counter .label {
-    font-size: 10px; letter-spacing: 0.8px; color: var(--dim); text-transform: uppercase;
+  #privacy-badge::before { content: "●"; font-size: 7px; }
+  #metrics {
+    display: grid; grid-template-columns: repeat(4, minmax(86px, 1fr)); gap: 7px;
   }
-  #counter .value {
-    font-size: 34px; font-weight: 700; line-height: 1.1; color: var(--sent);
+  .metric {
+    min-width: 86px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 13px; padding: 7px 9px; text-align: right;
+  }
+  .metric .label {
+    display: block; min-height: 22px; font-size: 9px; line-height: 1.15;
+    letter-spacing: 0.5px; color: var(--dim); text-transform: uppercase;
+  }
+  .metric .value {
+    display: block; font-size: 24px; font-weight: 700; line-height: 1; color: var(--sent);
     font-variant-numeric: tabular-nums;
   }
+  .metric.agent .value { color: var(--grey); }
+  .metric.refusal .value { color: var(--red); }
+  .metric.sensitive .value { color: var(--amber); }
+
+  #readiness-strip {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+    min-height: 38px; padding: 7px 10px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 14px;
+  }
+  #readiness-overall {
+    margin-right: 3px; padding: 5px 9px; border-radius: 8px; font-size: 10px;
+    font-weight: 700; letter-spacing: 0.45px; text-transform: uppercase;
+    background: rgba(142,142,147,0.15); color: var(--grey);
+  }
+  #readiness-overall.ready { background: rgba(48,209,88,0.15); color: var(--green); }
+  #readiness-overall.not-ready { background: rgba(255,69,58,0.13); color: var(--red); }
+  .readiness-item {
+    display: inline-flex; align-items: center; gap: 6px; color: var(--dim);
+    font-size: 11px; white-space: nowrap;
+  }
+  .readiness-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--grey); }
+  .readiness-item.ready { color: var(--text); }
+  .readiness-item.ready .readiness-dot { background: var(--green); box-shadow: 0 0 8px rgba(48,209,88,0.45); }
+  .readiness-item.not-ready .readiness-dot { background: var(--red); }
   .panel {
     background: var(--panel); border: 1px solid var(--border); border-radius: 18px;
     overflow: hidden; display: flex; flex-direction: column;
   }
-  #transcript-panel { grid-row: 2; overflow: hidden; padding: 0; }
+  #transcript-panel { grid-row: 3; overflow: hidden; padding: 0; }
   #transcript {
     display: grid; grid-template-columns: 1fr 1fr;
     overflow: hidden; flex: 1; min-height: 0;
@@ -112,7 +149,8 @@
     font-size: 10px; color: var(--dim-2); text-align: center; margin: 12px 0 6px;
   }
 
-  #side { grid-row: 2; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+  #side { grid-row: 3; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+  #side > .panel { flex: 0 0 auto; }
   .panel h2 {
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--dim);
     margin: 0; padding: 12px 14px 8px;
@@ -123,6 +161,7 @@
     border: 1px solid transparent;
   }
   .chip.allowed { background: rgba(48,209,88,0.16); color: var(--green); border-color: rgba(48,209,88,0.35); }
+  .chip.requires_holder { background: rgba(255,159,10,0.16); color: var(--amber); border-color: rgba(255,159,10,0.38); }
   .chip.forbidden { background: rgba(142,142,147,0.16); color: var(--grey); border-color: var(--border); }
   .chip.blocked {
     background: rgba(255,69,58,0.2); color: var(--red); border-color: rgba(255,69,58,0.55);
@@ -130,27 +169,98 @@
   }
   @keyframes flash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.8); } }
 
-  #card { flex: 1; }
+  #pending-body { padding: 0 14px 14px; }
+  .decision-status {
+    display: inline-block; padding: 3px 7px; margin-bottom: 8px; border-radius: 999px;
+    background: rgba(255,159,10,0.15); color: var(--amber); font-size: 10px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .decision-status.resolved, .decision-status.completed { background: rgba(48,209,88,0.14); color: var(--green); }
+  .decision-question { font-size: 12px; line-height: 1.35; margin: 0; }
+  .decision-question + .decision-question { margin-top: 8px; color: var(--dim); }
+  .decision-lang { display: block; margin-bottom: 2px; color: var(--dim-2); font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  #audit-list { padding: 0 14px 12px 20px; max-height: 245px; overflow-y: auto; }
+  .audit-empty { color: var(--dim); font-size: 12px; padding: 2px 0 4px; }
+  .audit-event { position: relative; padding: 0 0 12px 14px; border-left: 1px solid var(--border); }
+  .audit-event::before {
+    content: ""; position: absolute; left: -4px; top: 3px; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--sent);
+  }
+  .audit-event.forbidden::before { background: var(--red); }
+  .audit-event.requires_holder::before { background: var(--amber); }
+  .audit-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .audit-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 650; }
+  .source-badge {
+    flex: none; padding: 2px 5px; border-radius: 5px; font-size: 8px; font-weight: 800;
+    letter-spacing: 0.5px; background: rgba(10,132,255,0.16); color: #64aaff;
+  }
+  .source-badge.mcp { background: rgba(191,90,242,0.16); color: #da8fff; }
+  .audit-time { margin-left: auto; flex: none; color: var(--dim-2); font-size: 9px; }
+  .audit-result { margin-top: 3px; color: var(--dim); font-size: 10px; line-height: 1.3; }
+
   #card-body { margin: 0; font-size: 13px; padding: 0 14px 14px; }
   #card dt { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; }
   #card dd { margin: 3px 0 0 0; }
   #card ul { margin: 2px 0 0 16px; padding: 0; }
 
   footer { grid-column: 1 / -1; color: var(--dim-2); font-size: 11px; text-align: center; }
+
+  @media (max-width: 1050px) {
+    #app { grid-template-columns: 3fr 2fr; }
+    #metrics { grid-template-columns: repeat(2, minmax(86px, 1fr)); }
+    #readiness-strip { overflow-x: auto; }
+  }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
     <div>
-      <h1>Apoderado</h1>
+      <div class="brand-row">
+        <h1>Apoderado</h1>
+        <span id="privacy-badge">Displayed data redacted</span>
+      </div>
       <div class="case-line" id="case-line">Waiting for a call…</div>
     </div>
-    <div id="counter">
-      <div class="label">Decisions by account holder</div>
-      <div class="value"><span id="count">0</span> / <span id="count-total">0</span></div>
+    <div id="metrics" aria-label="Decision counts">
+      <div class="metric holder">
+        <span class="label">Holder decisions</span>
+        <span class="value" id="count-holder">0</span>
+      </div>
+      <div class="metric agent">
+        <span class="label">Agent decisions</span>
+        <span class="value" id="count-agent">0</span>
+      </div>
+      <div class="metric refusal">
+        <span class="label">Refusals</span>
+        <span class="value" id="count-refusal">0</span>
+      </div>
+      <div class="metric sensitive">
+        <span class="label">Sensitive disclosures</span>
+        <span class="value" id="count-sensitive">0</span>
+      </div>
     </div>
   </header>
+
+  <div id="readiness-strip" aria-label="Demo readiness">
+    <span id="readiness-overall">Checking readiness</span>
+    <span class="readiness-item" data-readiness="household">
+      <span class="readiness-dot"></span>Household number
+    </span>
+    <span class="readiness-item" data-readiness="institution">
+      <span class="readiness-dot"></span>Institution number
+    </span>
+    <span class="readiness-item" data-readiness="case">
+      <span class="readiness-dot"></span>Active case
+    </span>
+    <span class="readiness-item" data-readiness="mandate">
+      <span class="readiness-dot"></span>Mandate confirmed
+    </span>
+    <span class="readiness-item" data-readiness="mcp">
+      <span class="readiness-dot"></span>MCP server
+    </span>
+  </div>
 
   <div class="panel" id="transcript-panel">
     <div id="transcript">
@@ -178,6 +288,22 @@
       <h2>Mandate Board</h2>
       <div class="chips" id="chips"></div>
     </div>
+    <div class="panel" id="pending-panel">
+      <h2>Pending Decision</h2>
+      <div id="pending-body">
+        <span class="decision-status" id="decision-status">None pending</span>
+        <p class="decision-question">
+          <span class="decision-lang">English</span><span id="decision-en">No holder question waiting.</span>
+        </p>
+        <p class="decision-question">
+          <span class="decision-lang">Español claro</span><span id="decision-es">No hay una pregunta pendiente.</span>
+        </p>
+      </div>
+    </div>
+    <div class="panel" id="audit-panel">
+      <h2>Unified Audit Timeline</h2>
+      <div id="audit-list"><div class="audit-empty">No audit events yet.</div></div>
+    </div>
     <div class="panel" id="card">
       <h2>Callback Card</h2>
       <dl id="card-body">
@@ -186,18 +312,25 @@
     </div>
   </div>
 
-  <footer>polling /api/state every 400ms</footer>
+  <footer>Hackathon demonstration · local-only console · polling /api/state every 400ms</footer>
 </div>
 
 <script>
 const els = {
   caseLine: document.getElementById('case-line'),
-  count: document.getElementById('count'),
-  countTotal: document.getElementById('count-total'),
+  countHolder: document.getElementById('count-holder'),
+  countAgent: document.getElementById('count-agent'),
+  countRefusal: document.getElementById('count-refusal'),
+  countSensitive: document.getElementById('count-sensitive'),
   msgHousehold: document.getElementById('messages-household'),
   msgInstitution: document.getElementById('messages-institution'),
   chips: document.getElementById('chips'),
+  decisionStatus: document.getElementById('decision-status'),
+  decisionEn: document.getElementById('decision-en'),
+  decisionEs: document.getElementById('decision-es'),
+  auditList: document.getElementById('audit-list'),
   cardBody: document.getElementById('card-body'),
+  readinessOverall: document.getElementById('readiness-overall'),
 };
 
 function esc(s) {
@@ -218,22 +351,124 @@ function renderCase(c) {
     `${c.holder_name || '—'} · ${c.institution || '—'} · ${c.issue_type || '—'} · state: ${c.state}`;
 }
 
-function renderCounter(n) {
-  els.count.textContent = n;
-  els.countTotal.textContent = n;
-}
-
 function renderMandate(rules, violations) {
   const blockedVerbs = new Set(violations.map(v => v.verb));
-  els.chips.innerHTML = '';
+  els.chips.replaceChildren();
   for (const r of rules) {
     const chip = document.createElement('span');
     const blocked = blockedVerbs.has(r.verb);
-    chip.className = 'chip ' + (blocked ? 'blocked' : (r.allowed ? 'allowed' : 'forbidden'));
+    const disposition = ['allowed', 'requires_holder', 'forbidden'].includes(r.disposition)
+      ? r.disposition
+      : 'allowed';
+    chip.className = 'chip ' + (blocked ? 'blocked' : disposition);
     chip.textContent = r.verb.replace(/_/g, ' ');
-    chip.title = r.verb_label || r.verb;
+    chip.title = `${r.verb_label || r.verb} · ${disposition.replace(/_/g, ' ')}`;
     els.chips.appendChild(chip);
   }
+}
+
+function renderDecisionRequests(rows) {
+  const latest = [...rows].reverse();
+  const decision = latest.find(row => ['pending', 'open', 'requested'].includes(row.status)) || latest[0];
+  if (!decision) {
+    els.decisionStatus.className = 'decision-status';
+    els.decisionStatus.textContent = 'None pending';
+    els.decisionEn.textContent = 'No holder question waiting.';
+    els.decisionEs.textContent = 'No hay una pregunta pendiente.';
+    return;
+  }
+
+  const status = String(decision.status || 'pending').toLowerCase();
+  els.decisionStatus.className = 'decision-status ' +
+    (['resolved', 'completed'].includes(status) ? status : 'pending');
+  els.decisionStatus.textContent = status.replace(/_/g, ' ');
+  els.decisionEn.textContent = decision.question_en || 'Question unavailable.';
+  els.decisionEs.textContent = decision.question_es || 'Pregunta no disponible.';
+}
+
+function renderAudit(rows) {
+  els.auditList.replaceChildren();
+  if (!rows.length) {
+    const empty = document.createElement('div');
+    empty.className = 'audit-empty';
+    empty.textContent = 'No audit events yet.';
+    els.auditList.appendChild(empty);
+    return;
+  }
+
+  for (const row of rows) {
+    const disposition = ['allowed', 'requires_holder', 'forbidden'].includes(row.disposition)
+      ? row.disposition
+      : 'recorded';
+    const event = document.createElement('div');
+    event.className = `audit-event ${disposition}`;
+
+    const head = document.createElement('div');
+    head.className = 'audit-head';
+    const source = document.createElement('span');
+    const isMcp = String(row.source || '').toLowerCase().includes('mcp');
+    source.className = `source-badge${isMcp ? ' mcp' : ''}`;
+    source.textContent = isMcp ? 'MCP' : 'GUAVA';
+    const title = document.createElement('span');
+    title.className = 'audit-title';
+    title.textContent = String(row.verb || 'event').replace(/_/g, ' ');
+    const time = document.createElement('span');
+    time.className = 'audit-time';
+    time.textContent = fmtTime(row.created_at);
+    head.append(source, title, time);
+
+    const result = document.createElement('div');
+    result.className = 'audit-result';
+    result.textContent = row.result || row.trigger_redacted || disposition.replace(/_/g, ' ');
+    event.append(head, result);
+    els.auditList.appendChild(event);
+  }
+}
+
+function isSensitiveVerb(verb) {
+  return /(ssn|social_security|member_id|account_id|sensitive)/i.test(String(verb || ''));
+}
+
+function renderMetrics(data, auditRows) {
+  const decisions = data.decision_requests || data.decision_request || [];
+  const resolved = decision => ['resolved', 'completed'].includes(decision.status);
+  const holder = decisions.length
+    ? decisions.filter(decision => resolved(decision) && decision.decided_by === 'holder').length
+    : (data.consults || []).filter(consult => consult.decided_by === 'holder').length;
+  const agent = decisions.filter(
+    decision => resolved(decision) && decision.decided_by === 'agent'
+  ).length;
+  const auditRefusals = auditRows.filter(row => row.disposition === 'forbidden').length;
+  const refusal = (data.violations || []).length || auditRefusals;
+  const sensitiveViolations = (data.violations || []).filter(row => isSensitiveVerb(row.verb)).length;
+  const sensitiveAudit = auditRows.filter(row => isSensitiveVerb(row.verb)).length;
+  const sensitiveTranscript = (data.transcript || []).filter(
+    row => /\[REDACTED (?:SSN|MEMBER\/ACCOUNT ID)\]/.test(String(row.text || ''))
+  ).length;
+
+  els.countHolder.textContent = holder;
+  els.countAgent.textContent = agent;
+  els.countRefusal.textContent = refusal;
+  els.countSensitive.textContent = Math.max(
+    sensitiveViolations || sensitiveAudit,
+    sensitiveTranscript
+  );
+}
+
+function renderReadiness(health) {
+  const statuses = {
+    household: Boolean(health.phone_numbers && health.phone_numbers.household_configured),
+    institution: Boolean(health.phone_numbers && health.phone_numbers.institution_configured),
+    case: Boolean(health.active_case && health.active_case.ready),
+    mandate: Boolean(health.mandate && health.mandate.confirmed),
+    mcp: Boolean(health.mcp && health.mcp.ready),
+  };
+  for (const item of document.querySelectorAll('[data-readiness]')) {
+    const ready = statuses[item.dataset.readiness];
+    item.className = `readiness-item ${ready ? 'ready' : 'not-ready'}`;
+  }
+  els.readinessOverall.className = health.ready ? 'ready' : 'not-ready';
+  els.readinessOverall.textContent = health.ready ? 'Demo ready' : 'Setup incomplete';
 }
 
 // speaker "agent" (Apoderado, acting for the account holder) renders as the
@@ -261,10 +496,11 @@ function renderThread(container, rows) {
   container.scrollTop = container.scrollHeight;
 }
 
-let lastTranscriptLen = 0;
+let lastTranscriptSignature = '';
 function renderTranscript(rows) {
-  if (rows.length === lastTranscriptLen) return;
-  lastTranscriptLen = rows.length;
+  const signature = JSON.stringify(rows.map(row => [row.id, row.text, row.created_at]));
+  if (signature === lastTranscriptSignature) return;
+  lastTranscriptSignature = signature;
   renderThread(els.msgHousehold, rows.filter(u => u.leg === 'household'));
   renderThread(els.msgInstitution, rows.filter(u => u.leg === 'institution'));
 }
@@ -281,22 +517,71 @@ function renderCard(card) {
   els.cardBody.innerHTML = parts.join('') || '<dd style="color:var(--dim)">No card yet.</dd>';
 }
 
+let auditRows = [];
+let auditCaseId = null;
+let auditFetchedAt = 0;
+let auditInFlight = false;
+let lastState = null;
+
+async function refreshAudit(caseId, force = false) {
+  if (!caseId || auditInFlight) return;
+  if (!force && caseId === auditCaseId && Date.now() - auditFetchedAt < 1000) return;
+  auditInFlight = true;
+  try {
+    const res = await fetch(`/api/cases/${encodeURIComponent(caseId)}/audit`);
+    if (!res.ok) return;
+    auditRows = await res.json();
+    auditCaseId = caseId;
+    auditFetchedAt = Date.now();
+    renderAudit(auditRows);
+    if (lastState) renderMetrics(lastState, auditRows);
+  } finally {
+    auditInFlight = false;
+  }
+}
+
 async function tick() {
   try {
     const res = await fetch('/api/state');
+    if (!res.ok) return;
     const data = await res.json();
+    lastState = data;
+    if (!data.case) {
+      auditRows = [];
+      auditCaseId = null;
+      renderAudit([]);
+    } else if (data.case.id !== auditCaseId) {
+      auditRows = [];
+      renderAudit([]);
+      void refreshAudit(data.case.id, true);
+    } else {
+      void refreshAudit(data.case.id);
+    }
     renderCase(data.case);
-    renderCounter(data.decision_count);
-    renderMandate(data.mandate, data.violations);
-    renderTranscript(data.transcript);
+    renderMetrics(data, auditRows);
+    renderMandate(data.mandate || [], data.violations || []);
+    renderDecisionRequests(data.decision_requests || data.decision_request || []);
+    renderTranscript(data.transcript || []);
     renderCard(data.card);
   } catch (e) {
     // Swallow — the next tick will retry. Don't spam the console during a demo.
   }
 }
 
+async function healthTick() {
+  try {
+    const res = await fetch('/api/health');
+    if (!res.ok) return;
+    renderReadiness(await res.json());
+  } catch (e) {
+    // Keep last known readiness state; next health tick retries.
+  }
+}
+
 tick();
+healthTick();
 setInterval(tick, 400);
+setInterval(healthTick, 2000);
 </script>
 </body>
 </html>
